@@ -37,86 +37,63 @@ from pyodb  import   odbDca
 
 
 
-# CCMA  PATH
-ccma_path="/hpcperm/cvah/tuning/diagnostics/bgos/odb_in/raw/odb_ccma/CCMA"
+
+
+# CAUTION !: NEVER CHANGE THE ORDER OF COLUMNS 
+# TO ADD NEW ONES , ONE CAN JUST DO AN APPEND !
+# columns                            col index shifted by 1 (to match the column no in ogriginal bash script )
+cols      =[ " "                       ,  # 0   doesn't exist 
+             "obstype"                 ,  # 1
+             "codetype"                ,  # 2
+             "statid"                  ,  # 3
+             "varno"                   ,  # 4
+             "degrees(lat)"            ,  # 5
+             "degrees(lon)"            ,  # 6 
+             "vertco_type"             ,  # 7
+             "vertco_reference_1"      ,  # 8
+             "sensor"                  ,  # 9
+             "date"                    ,  # 10
+             "time"                    ,  # 11
+             "datum_status.active"     ,  # 12
+             "datum_status.blacklisted",  # 13
+             "datum_status.passive"    ,  # 14
+             "datum_status.rejected"   ,  # 15
+             "an_depar"                ,  # 16
+             "fg_depar"                ,  # 17
+             "obsvalue"                ,  # 18
+             "final_obs_error"         ,  # 19
+             "fg_error"                ,  # 20
+             "biascorr_fg"             ,  # 21
+             "datum_event1.fg2big@body"   # 22
+             ]
+# Considered tables & additional sql statement 
+tables        =["hdr","desc","body","errstat"]  
+extra_ccma_sql="(an_depar is not NULL) AND (fg_depar is not NULL)"
 
 
 
 
+# JARVINEN !
+# column name as keys -> attributes 
+# CCMA NEEDS  !
+#            "obs_name","obstype" ,"codetype"     ,"varno"            ,"coord_ref_1"      ,"sensor","level_range" , 
+ccma_keys=["obs_name"  , cols[1]  , cols[2]       ,cols[4]            ,cols[8]            , cols[9],"level_range" ] 
+gpssol   =["gpssol"    , 1        ,110            ,128                ,None               ,None    ,None ] # CONV 
+ship     =["ship"      , 1        ,[21,24,182]    ,[1,39,41,42,58]    ,None               ,None    ,None ] #
+synop    =["synop"     , 1        ,[11,14,170]    ,[1,39,41,42,42,58] ,None               ,None    ,None ] #
+dribu    =["dribu"     , 4        ,None           ,[1,39,41,42]       ,None               ,None    ,None ] #
+ascat    =["ascat"     , 9        ,None           ,None               ,None               ,None    ,None ] #
+radar    =["radar"     , 13       ,None           ,[29,195]           ,None               ,None    ,None ] #
+airep    =["airep"     , 2        ,None           ,[2,3,4]            ,None               ,None    ,None ] #
+temp     =["temp"      , 5        ,None           ,[2,3,4,7]          ,None               ,None    ,None ] #
+amsua    =["amsua"     , 7        ,None           ,None               ,[6,9]              ,3       ,[6,9]] # SATEM 
+#amsub   =["amsub"     , 7        ,None           ,None               ,None               ,4       ,None]  #
+mhs      =["msh"       , 7        ,None           ,None               ,[3,5]              ,15      ,[3,5]] #
+iasi     =["iasi"      , 7        ,None           ,None               ,None               ,16      ,None ] #
+atms     =["atms"      , 7        ,None           ,None               ,[[7,22],[18,"MAX"]],19      ,[7,22],[18,"MAX"]]#
+mwhs2    =["mwhs2"     , 7        ,None           ,None               ,[11,15]            ,73      ,[11,15]]#
 
 
-# ECMA  PATH 
-ecma_path="/hpcperm/cvah/tuning/diagnostics/bgos/odb_in/raw/odb_ecma"
-# ECMA.amsua
-# ECMA.amsub
-# ECMA.atms
-# ECMA.conv
-# ECMA.iasi
-# ECMA.mwhs2
-# ECMA.radarv
-# ECMA.scatt
-
-
-# ECMA columns  & tables 
-ecma_cols  =["obstype@hdr"  , 
-             "codetype@hdr" , 
-             "statid@hdr"   , 
-             "varno@body"   , 
-             "degrees(lat@hdr)", 
-             "degrees(lon@hdr)" , 
-             "vertco_type@body", 
-             "vertco_reference_1@body", 
-             "sensor@hdr",
-             "date@hdr"        , 
-             "time@hdr", 
-             "datum_status.active", 
-             "datum_status.blacklisted", 
-             "datum_status.passive",
-             "datum_status.rejected", 
-             "an_depar", 
-             "fg_depar",
-             "obsvalue",  
-             "final_obs_error",
-             "fg_error", 
-             "biascorr_fg", 
-             "datum_event1.fg2big@body" ]
-
-# ECMA cols and tables 
-ecma_tables=["hdr","desc","body","errstat"]  
-ecma_flags ="(an_depar is not NULL) AND (fg_depar is not NULL)"
-
-
-
-# CCMA columns & tables 
-ccma_cols   =["obstype@hdr",   "codetype@hdr", "statid@hdr","varno@body","degrees(lat@hdr)", 
-              "degrees(lon@hdr)","vertco_type@body",       "vertco_reference_1@body",    "sensor@hdr", "date@hdr",
-              "time@hdr", "datum_status.active", "datum_status.blacklisted","datum_status.passive",
-              "datum_status.rejected","an_depar","fg_depar","obsvalue", "final_obs_error",
-              "fg_error","biascorr_fg" ]
-
-ccma_tabs =["hdr,desc,body,errstat"]
-ccma_flags="(an_depar is not NULL) AND (datum_event1.fg2big@body = 0) AND (fg_depar is not NULL)"
-
-
-# CCMA (obstool)
-# keys (columns )
-keys    =["name"    ,"obstype","codetype"     ,"varno"         ,"level_range" ,"vertco_reference_1" ,"sensor"]
-gnss    =["gpssol"  , 1       ,110            ,128             ,None          ,None             ,None]#
-synop   =["synop"   , 1       ,[11,14,170,182],None            ,None          ,None             ,None]#
-synop_v =["synop_v" , 1       ,[11,14,170,182],[1,42,41,58,39] ,None          ,None             ,None]#
-dribu   =["dribu"   , 4       ,None           ,[1,39,41,42]    ,None          ,None             ,None]#
-ascat   =["ascat"   , 9       ,None           ,None            ,None          ,None             ,None]#
-radar   =["radar"   , 13      ,None           ,[29,195]        ,None          ,None             ,None]#
-airep   =["airep"   , 2       ,None           ,[2,3,4]         ,None                            ,None]#
-airep_l =["airep_l" , 2       ,None           ,[2,3,4]         ,[25000,35000]                   ,None]#
-temp    =["temp"    , 5       ,None           ,[2,3,4,7]       ,None          ,None             ,None]# 
-temp_l  =["temp_l"  , 5       ,None           ,[2,3,4,7]       ,[40000,60000] ,None             ,None]#
-amsua   =["amsua"   , 7       ,None           ,None            ,None          ,None             ,3 ]#
-amsub   =["amsub"   , 7       ,None           ,None            ,None          ,None             ,4 ]#
-mhs     =["msh"     , 7       ,None           ,None            ,None          ,None             ,15]#
-iasi    =["iasi"    , 7       ,None           ,None            ,None          ,None             ,16]#
-
-# CCMA  Create observation list and attributes 
 obs_list=[ gnss   , 
            synop  ,
            synop_v, 
@@ -133,52 +110,80 @@ obs_list=[ gnss   ,
            iasi]
 
 
-
-
-
+# TO BE ADDED 
+# ECMA NEEDS 
 type_   = ObsType ()  
-obs_dict=type_.GenDict (  keys, obs_list )
+obs_dict=type_.GenDict (  ccma_keys, obs_list )
+
+# CCMA  PATH
+ccma_path="/hpcperm/cvah/tuning/diagnostics/bgos/odb_in/raw/odb_ccma/CCMA"
+
+# 1- CCMA FOR jarvinen   (  bash equivalence -> get_ccma=yes &&  jarvinen ==yes  )
+ccma=OdbCCMA()
+sql=SqlHandler ()
 
 
-# Prepare DCA files if not there 
-ecma_db      = OdbObject ( ecma_path )
-ecma_dbname  = ecma_db.GetAttrib()["name"]
+def CreateDca(  path , sub_base=None     ):
+    # Prepare DCA files if not there 
+    dbpath  = path 
+    db      = OdbObject ( dbpath )
+    dbname  = db.GetAttrib()["name"]
+    if dbname == "ECMA" and sub_base != None :
+       dbpath  =".".join( [path, sub_base ]   )
 
 
-if not os.path.isdir ("/".join(  [ecma_path , "dca"] )  ):
-   env.OdbVars["CCMA.IOASSIGN"]="/".join(  (ecma_path, "CCMA.IOASSIGN" ) )
-   status = pyodbDca ( dbpath=ecma_path , db=ecma_dbname , ncpu=8  )
-else :
-    print(  "DCA files already in database:\n{}".format( dbpath )  )
+    if not os.path.isdir ("/".join(  [dbpath , "dca"] )  ):
+       print( "No DCA files in {} 'directory'".format(dbpath ) ) 
+       env.OdbVars["CCMA.IOASSIGN"]="/".join(  (dbname, "CCMA.IOASSIGN" ) )
+       status =    odbDca ( dbpath=dbpath , db=dbname , ncpu=8  )
+    else :
+       print(  "DCA files generated already in database: '{}'".format( dbname )  )
 
-quit()
+
+# CCMA  PATH
+ccma_path="/hpcperm/cvah/tuning/diagnostics/bgos/odb_in/raw/odb_ccma/CCMA"
 
 # 1- CCMA FOR obstool  (  bash equivalence -> get_ccma=yes  )
-# Instantiation  ! 
 ccma=OdbCCMA()
-ecma=OdbECMA()
-sql =SqlHandler()
+CreateDca(ccma_path)
+sql=SqlHandler () 
 
+# ECMA  PATH  & subbases 
+# 
+ecma_path   ="/hpcperm/cvah/tuning/diagnostics/bgos/odb_in/raw/odb_ecma/ECMA"
+ecma_subbase=["conv",
+              "radarv",
+              "amsua",
+              "amsub",
+              "atms",
+              "iasi",
+              "scatt",
+              "mwhs2", 
+              "seviri"]
 
 # Build queries and fetch odb rows 
-for i in range(len(obs_dict)):
+for i in range(len(obs_dict[0:2])):
     obs=obs_dict[i]
+
+    #ccma_path = ccma_path+"/"+obs_dict[i]["name"]
+
     llev=False 
     lev_range= obs["level_range"]
     if lev_range != None :
        llev = True 
-    query=sql.BuildQuery(columns         =ccma_cols ,
-                           tables        =ccma_tabs ,
-                           obs_dict      =obs    ,
-                           has_levels    =llev  ,
+    query=sql.BuildQuery(  columns       =cols     ,
+                           tables        =tables   ,
+                           obs_dict      =obs      ,
+                           has_levels    =llev     ,
                            vertco_type   ="height" ,
-                           remaining_sql=ccma_flags )
-    rows =ccma.FetchByObstype (    ccma_path=dbpath, 
-                                   sql_query=query ,
-                                   sqlfile  =None ,
-                                   pools    =None ,
-                                   verbose  =False ,
+                           remaining_sql=extra_ccma_sql )
+
+    rows =ccma.FetchByObstype (    dbpath   =ccma_path , 
+                                   sql_query=query     ,
+                                   sqlfile  =None      ,
+                                   pools    =None      ,
+                                   verbose  =False     ,
                                    get_header=False)
 
-#    for row in rows:        print( row) 
+    for row in rows:        print( row) 
 
