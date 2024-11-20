@@ -6,6 +6,8 @@ import pandas as pd
 from pyproj import CRS, Transformer
 
 
+from datetime import datetime ,timedelta
+
 from scipy.spatial.distance import cdist
 
 
@@ -109,6 +111,10 @@ selected_obs  =type_.GenDict (  ccma_keys, obs_list )
 
 
 
+StartTime = datetime.now()
+
+
+
 # CCMA  PATH
 cma_date="2024010500"
 ccma_path="/hpcperm/cvah/tuning/diags/xp1/odb_in/raw/"+cma_date+"/CCMA"
@@ -123,7 +129,23 @@ sql=SqlHandler ()
 # START GETTING DATA FOR STATISTICS 
 
 
-def haversine(lon1, lat1, lon2, lat2):
+def DupList(l_):
+    dlist=  [  j for j in l_  for i in   l_  ]
+    return dlist  
+
+
+
+def ReshapeList( l_ ):
+    slist =  [[ j for j in l_ ] for i in l_ ]
+    l0    =  []
+    for _  in slist :
+        l0=l0+ _
+
+    return l0 
+
+
+
+def haversine(lon1, lat1, lon2, lat2) :
     # Radius of Earth in kilometers
     R = 6371.0
     phi1 = np.radians(lat1)
@@ -136,29 +158,8 @@ def haversine(lon1, lat1, lon2, lat2):
     distance = R * c
     return distance
 
-
-# AS IN R scripts 
-# Spatial separation bin for OmG
-bin_int      = 10  # [km] : binning interval for pairs
-bin_max_dist = 100 # [km] : maximal distance for the bin_int
-
-# Time separation distance
-time_btw_omg = 60  # [+/- min] : time_btw_omg = time between OmG/OmA in pairs
-dist         = 10
-
-
-#lDint = [0, 1, list(np.arange(bin_int, bin_max_dist, bin_int) )]
-#cDint = [0,    list(np.arange(bin_int, bin_max_dist, bin_int)) ]
-
-lDint = list(np.arange(bin_int, bin_max_dist +10 , bin_int ))
-cDint = list(np.arange(bin_int, bin_max_dist +10 , bin_int)) 
-lDint = [0, 1 ]+lDint  
-cDint = [0]    +cDint 
-
 # GET DATE FROM LOOP 
 #date =  "%Y%m%d%H"
-# COLS 
-lab_inputx = ["statid","lat","lon","an_depar","fg_depar","obsvalue"]
 
 
 # Build queries and fetch odb rows 
@@ -210,21 +211,150 @@ wgs84_crs = CRS("EPSG:4326")
 transformer = Transformer.from_crs(wgs84_crs, wgs84_crs, always_xy=True)
 
 coord=[]
+nobs=0 
+
+
 for row in rows:
     obst  = row[0]
     varno = row[3]   
-    if obst ==2 and varno== 4 and row[2].rstrip() == "EU8478":
+    if obst ==2 and varno== 4 and row[2].strip() == "EU8478":
+       nobs =nobs+1 
        st,  lat , lon , an_d , fg_d , obsv =row[2],row[4],row[5],row[9],row[10],row[11]
        coord.append([transformer.transform(lon, lat)[0],transformer.transform(lon, lat)[1] ]   ) 
+       vstat.append     (st   )
+       fg_depar_v.append(  fg_d )
+       an_depar_v.append(  an_d )
 
-#       vstat.append     (st   )
-#       fg_depar_v.append(  fg_d )
-#       an_depar_v.append( an_d   )
+
+StartTime = datetime.now()
 
 matdist = cdist(coord, coord, metric=lambda u, v:    haversine(u[0], u[1], v[0], v[1]))
+
+# DISTANCES MATRIX 
 m=matdist.T 
 
-for i in  range(m.shape[0] ) :
-    for j in  range( m.shape[1] ):
-         print( m[i, j ] ) 
+dim1 =list(np.arange( m.shape[0]  ))
+dim2 =list(np.arange( m.shape[1]  ))
+mdist=list(m.reshape( m.shape[0]*m.shape[1]  ) )
+
+
+d1  =ReshapeList(  dim1 )
+oma1=ReshapeList(   an_depar_v    )
+omg1=ReshapeList(   fg_depar_v    )
+
+d2  =DupList    (  dim2 )
+oma2=DupList  (   an_depar_v    )
+omg2=ReshapeList(   fg_depar_v    )
+
+#lldist=DupList( lDint  ) 
+
+
+# ADD  an_depar , fg_depar
+#Same in R : OA1         OA2        FG1        FG2 (but in lower )
+df    = pd.DataFrame({"n1": d1  , "n2": d2      , "dist" :mdist ,  
+                                  "oa1":oma1    , "oa2":oma2  , 
+                                  "fg1":omg1    , "fg2":omg2  }   )
+
+
+
+# AS IN R scripts 
+# Spatial separation bin for OmG
+bin_int      = 10  # [km] : binning interval for pairs
+bin_max_dist = 100 # [km] : maximal distance for the bin_int
+
+# Time separation distance
+time_btw_omg = 60  # [+/- min] : time_btw_omg = time between OmG/OmA in pairs
+dist         = 10
+
+
+lDint = list(np.arange(bin_int, bin_max_dist +10 , bin_int ))
+cDint = list(np.arange(bin_int, bin_max_dist +10 , bin_int))
+
+subdf =df.query( "dist <=    "+str(bin_max_dist)  )
+
+# Partitions over bins inplace !
+# FOR MORE CONTINUOUS DATA , WE CAN GROUP BY dist   
+# We use the bins 10 km 
+
+dbin   =[0,1]+lDint
+dlabel =[0  ]+cDint 
+
+res=pd.cut(  subdf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
+subdf["dbin"]   = [ i for i in  res[0]  ]
+
+
+# Agrregate 
+# SUM 
+StatTab = subdf.groupby('dbin')['oa1'].sum().reset_index()
+sum_fg1 = subdf.groupby('dbin')['fg1'].sum().reset_index()
+sum_fg2 = subdf.groupby('dbin')['fg2'].sum().reset_index()
+dfg_    =subdf["fg1"]*df["fg2"] 
+sqrt_fg1=dfg_goupby("dbin").sum().reset_index ()
+
+
+
+quit()
+#_.sum().reset_index() )
+#.groupby( "dbin" )
+# NOBS 
+#sum_nobs = subdf.groupby('dbin')['fg2'].sum().reset_index()  # COULD BE ao2 whatevere !
+
+#print( subdf  )
+#print( StatTab )
+
+
+#  StatTab        = aggregate(list(Asum1   = OA1)                , list(dist=ldist), FUN=sum    )
+#  StatTab$FGsum1 = aggregate(list(FGSUM1  = FG1)                , list(dist=ldist), FUN=sum    )$FGSUM1
+#  StatTab$FGsum2 = aggregate(list(FGSUM2  = FG2)                , list(dist=ldist), FUN=sum    )$FGSUM2
+#  StatTab$AFGsqr = aggregate(list(AFGSQR  = OA1*FG2)            , list(dist=ldist), FUN=sum    )$AFGSQR
+#  StatTab$FGsqr  = aggregate(list(FGSQR   = FG1*FG2)            , list(dist=ldist), FUN=sum    )$FGSQR
+#  StatTab$num    = aggregate(list(NOBS    = FG2)                , list(dist=ldist), FUN=length )$NOBS
+
+
+
+
+print( StatTab  )  
+quit()
+#==============================================================
+# COV(XY) = E[X*Yt] - E[X]*E[Yt] 
+# save: 
+# sum[X]; sum[Yt]; sum[X*Yt]; num[X]
+#
+# COV(OA1,FG2) = E[OA1*FG2] - E[OA1]*E[FG2]
+# OA1 = an_depar
+# FG2 = fg_depar
+# save: 
+# sum[OA1]; sum[FG2] ;sum[OA1*FG2]; num[FG2]
+#==============================================================
+# STD(X) = sqrt( E[X^2] - (E[X])^2 )
+# save: 
+# sum[FG1]   ; sum[FG2]   ; sum[OA1]
+# sum[FG1^2] ; sum[FG2^2] ; sum[OA1^2]
+#==============================================================
+# COVARIANCE, CORRELATIONS
+
+#  StatTab        = aggregate(list(Asum1   = OA1)                , list(dist=ldist), FUN=sum    )
+StatTab = subdf.groupby('dist')['oa1'].sum().reset_index()
+
+print( subdf  ) 
+print( StatTab ) 
+
+
+
+#  StatTab$FGsum1 = aggregate(list(FGSUM1  = FG1)                , list(dist=ldist), FUN=sum    )$FGSUM1
+#  StatTab$FGsum2 = aggregate(list(FGSUM2  = FG2)                , list(dist=ldist), FUN=sum    )$FGSUM2
+#  StatTab$AFGsqr = aggregate(list(AFGSQR  = OA1*FG2)            , list(dist=ldist), FUN=sum    )$AFGSQR
+#  StatTab$FGsqr  = aggregate(list(FGSQR   = FG1*FG2)            , list(dist=ldist), FUN=sum    )$FGSQR
+#  StatTab$num    = aggregate(list(NOBS    = FG2)                , list(dist=ldist), FUN=length )$NOBS
+
+
+
+
+
+quit()
+Duration=EndTime - StartTime
+print( "Duration" , Duration   )
+
+
+
 ShowError()
