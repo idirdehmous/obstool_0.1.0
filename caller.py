@@ -279,42 +279,10 @@ subdf =df.query( "dist <=    "+str(bin_max_dist)  )
 dbin   =[0,1]+lDint
 dlabel =[0  ]+cDint 
 
-res=pd.cut(  subdf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
-subdf["dbin"]   = [ i for i in  res[0]  ]
+dbin_serie   =pd.cut(  subdf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
+dbin_col     =dbin_serie[0].to_list()
+subdf["dbin"]=dbin_col
 
-
-# Agrregate 
-# SUM 
-StatTab = subdf.groupby('dbin')['oa1'].sum().reset_index()
-sum_fg1 = subdf.groupby('dbin')['fg1'].sum().reset_index()
-sum_fg2 = subdf.groupby('dbin')['fg2'].sum().reset_index()
-dfg_    =subdf["fg1"]*df["fg2"] 
-sqrt_fg1=dfg_goupby("dbin").sum().reset_index ()
-
-
-
-quit()
-#_.sum().reset_index() )
-#.groupby( "dbin" )
-# NOBS 
-#sum_nobs = subdf.groupby('dbin')['fg2'].sum().reset_index()  # COULD BE ao2 whatevere !
-
-#print( subdf  )
-#print( StatTab )
-
-
-#  StatTab        = aggregate(list(Asum1   = OA1)                , list(dist=ldist), FUN=sum    )
-#  StatTab$FGsum1 = aggregate(list(FGSUM1  = FG1)                , list(dist=ldist), FUN=sum    )$FGSUM1
-#  StatTab$FGsum2 = aggregate(list(FGSUM2  = FG2)                , list(dist=ldist), FUN=sum    )$FGSUM2
-#  StatTab$AFGsqr = aggregate(list(AFGSQR  = OA1*FG2)            , list(dist=ldist), FUN=sum    )$AFGSQR
-#  StatTab$FGsqr  = aggregate(list(FGSQR   = FG1*FG2)            , list(dist=ldist), FUN=sum    )$FGSQR
-#  StatTab$num    = aggregate(list(NOBS    = FG2)                , list(dist=ldist), FUN=length )$NOBS
-
-
-
-
-print( StatTab  )  
-quit()
 #==============================================================
 # COV(XY) = E[X*Yt] - E[X]*E[Yt] 
 # save: 
@@ -333,12 +301,56 @@ quit()
 #==============================================================
 # COVARIANCE, CORRELATIONS
 
-#  StatTab        = aggregate(list(Asum1   = OA1)                , list(dist=ldist), FUN=sum    )
-StatTab = subdf.groupby('dist')['oa1'].sum().reset_index()
+# Agrregate 
+# SUM  :  oa1 , fg1 , fg2 
+sum_oa1 = subdf.groupby('dbin')['oa1'].sum().reset_index()
+sum_fg1 = subdf.groupby('dbin')['fg1'].sum().reset_index()
+sum_fg2 = subdf.groupby('dbin')['fg2'].sum().reset_index()
 
-print( subdf  ) 
-print( StatTab ) 
+# SUM  :   fg1*fg2
+fg1_xfg2=  subdf["fg1"]*subdf["fg2"]
+fg12_dict =  {"fg1xfg2": fg1_xfg2,"dbin": dbin_serie[0]}
+fg1fg2    = pd.DataFrame(fg12_dict  )
+sqrt_fg   =fg1fg2.groupby( "dbin").sum()
 
+
+# SUM  :   oa1*fg2
+a1_xfg2  =subdf["oa1"]*subdf["fg2"]
+a1fg1_dict =  {"oa1xfg2": a1_xfg2,"dbin": dbin_serie[0]}
+
+a1fg2    = pd.DataFrame(a1fg1_dict  )
+sqrt_afg2= a1fg2.groupby( "dbin" ).sum()
+
+# NOBS by bin 
+nobs    =subdf.groupby( "dbin" )["fg2"].count()
+
+# STD
+f11      =subdf["fg1"]*subdf["fg1"]        # FG1 *FG1 
+f11_dict  =  {"fg1^2": f11,"dbin": dbin_serie[0]}
+_  = pd.DataFrame(f11_dict  )
+sqrt_fg11= _.groupby( "dbin" ).sum()
+
+
+f22       =subdf["fg2"]*subdf["fg2"]        # FG2 *FG2
+f22_dict  =  {"fg2^2": f11,"dbin": dbin_serie[0]}
+_  = pd.DataFrame(f22_dict  )
+sqrt_fg22 = _.groupby( "dbin" ).sum()
+
+
+a11       =subdf["oa1"]*subdf["oa1"]        # OA1 *OA1
+a11_dict  =  {"oa1^2": a11,"dbin": dbin_serie[0]}
+_  = pd.DataFrame(a11_dict  )
+sqrt_a11  = _.groupby( "dbin" ).sum()
+
+
+print( sqrt_fg22 , sqrt_a11 )  
+
+
+
+
+#StatTab$FGsqr1 = aggregate(list(FGSQR1  = FG1*FG1)            , list(dist=ldist), FUN=sum )$FGSQR1
+#StatTab$FGsqr2 = aggregate(list(FGSQR2  = FG2*FG2)            , list(dist=ldist), FUN=sum )$FGSQR2
+#StatTab$Asqr1  = aggregate(list(ASQR1   = OA1*OA1)            , list(dist=ldist), FUN=sum )$ASQR1
 
 
 #  StatTab$FGsum1 = aggregate(list(FGSUM1  = FG1)                , list(dist=ldist), FUN=sum    )$FGSUM1
@@ -347,11 +359,7 @@ print( StatTab )
 #  StatTab$FGsqr  = aggregate(list(FGSQR   = FG1*FG2)            , list(dist=ldist), FUN=sum    )$FGSQR
 #  StatTab$num    = aggregate(list(NOBS    = FG2)                , list(dist=ldist), FUN=length )$NOBS
 
-
-
-
-
-quit()
+EndTime = datetime.now()
 Duration=EndTime - StartTime
 print( "Duration" , Duration   )
 
