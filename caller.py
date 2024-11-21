@@ -308,15 +308,15 @@ sum_fg1 = subdf.groupby('dbin')['fg1'].sum().reset_index()
 sum_fg2 = subdf.groupby('dbin')['fg2'].sum().reset_index()
 
 # SUM  :   fg1*fg2
-fg1_xfg2=  subdf["fg1"]*subdf["fg2"]
-fg12_dict =  {"fg1xfg2": fg1_xfg2,"dbin": dbin_serie[0]}
-fg1fg2    = pd.DataFrame(fg12_dict  )
-sqrt_fg   =fg1fg2.groupby( "dbin").sum()
+fg1_xfg2    =  subdf["fg1"]*subdf["fg2"]     # FG1*FG2 
+fg12_dict   =  {"fg1*fg2": fg1_xfg2,"dbin": dbin_serie[0]}
+fg1fg2      = pd.DataFrame(fg12_dict  )
+sqrt_fg12   =fg1fg2.groupby( "dbin").sum()
 
 
 # SUM  :   oa1*fg2
-a1_xfg2  =subdf["oa1"]*subdf["fg2"]
-a1fg1_dict =  {"oa1xfg2": a1_xfg2,"dbin": dbin_serie[0]}
+a1_xfg2  =subdf["oa1"]*subdf["fg2"]         # OA1*FG2 
+a1fg1_dict =  {"oa1*fg2": a1_xfg2,"dbin": dbin_serie[0]}
 
 a1fg2    = pd.DataFrame(a1fg1_dict  )
 sqrt_afg2= a1fg2.groupby( "dbin" ).sum()
@@ -326,38 +326,154 @@ nobs    =subdf.groupby( "dbin" )["fg2"].count()
 
 # STD
 f11      =subdf["fg1"]*subdf["fg1"]        # FG1 *FG1 
-f11_dict  =  {"fg1^2": f11,"dbin": dbin_serie[0]}
+f11_dict  =  {"fg1*fg1": f11,"dbin": dbin_serie[0]}
 _  = pd.DataFrame(f11_dict  )
 sqrt_fg11= _.groupby( "dbin" ).sum()
 
 
 f22       =subdf["fg2"]*subdf["fg2"]        # FG2 *FG2
-f22_dict  =  {"fg2^2": f11,"dbin": dbin_serie[0]}
+f22_dict  =  {"fg2*fg2": f11,"dbin": dbin_serie[0]}
 _  = pd.DataFrame(f22_dict  )
 sqrt_fg22 = _.groupby( "dbin" ).sum()
 
 
 a11       =subdf["oa1"]*subdf["oa1"]        # OA1 *OA1
-a11_dict  =  {"oa1^2": a11,"dbin": dbin_serie[0]}
+a11_dict  =  {"oa1*oa1": a11,"dbin": dbin_serie[0]}
 _  = pd.DataFrame(a11_dict  )
 sqrt_a11  = _.groupby( "dbin" ).sum()
 
+# Results 
+# 
+# sum_oa1, sum_fg1, sum_fg2 , sqrt_fg12 , sqrt_afg2 , sqrt_fg11, sqrt_fg22, sqrt_a11  , nobs 
 
-print( sqrt_fg22 , sqrt_a11 )  
+# COV 
+ag1 = sum_oa1["oa1"].sum()
+ag2 = sum_fg1["fg1"].sum()
+ag3 = sum_fg2["fg2"].sum()
+ag4 = sqrt_afg2["oa1*fg2"].sum()
+ag5 = sqrt_fg12["fg1*fg2"].sum()
+ag6 = sqrt_fg22 ["fg2*fg2"].sum()
 
+# STD 
+ag7 = sqrt_fg11["fg1*fg1"].sum()
+ag8 = sqrt_fg22["fg2*fg2"].sum()
+ag9 = sqrt_a11 ["oa1*oa1"].sum()
+
+
+
+#    print (c ( monSENS$DIST, monSENS$COV.DR.B   ) )
+#    print( c(  monSENS$DIST , monSENS$COV.DR.R ) )
+#    print( c(  monSENS$DIST ,  monSENS$COV.HL  ) )
+
+# DIST 
+d=[ 5.0000000 ,15.0000000 ,25.0000000, 35.0000000 ,45.0000000, 55.0000000 , 65.0000000 ,75.0000000 ,85.0000000, 95.0000000  ]  
+# DR B 
+drb=[3.5011069 , 2.4077607 , 1.5287413  ,1.1799912 , 0.3213617 , 0.3574087 , 0.2883566 ,-3.4877784 , -0.8624630 , 0.3901188 ]
+
+# DR R 
+drr=[1.6579710  ,1.2983750 ,0.6013322  ,0.5480089 , 0.4299339  ,0.4823704  ,1.2023668, -1.6624207 , -0.2441650 , 0.3772984  ]
+
+
+# HL 
+hl= [ 5.1590779  ,3.7061357 , 2.1300735 , 1.7280002 , 0.7512955 , 0.8397791 , 1.4907235 ,-5.1501990 ,-1.1066280 , 0.7674172  ]
+
+
+
+cor_drb = [3.5011069,  2.4077607 , 1.5287413 , 1.1799912  ,0.3213617 , 0.3574087 ,
+ 0.2883566, -3.4877784 ,-0.8624630 , 0.3901188   ]
+
+cor_drr =[ 0.44523863 , 0.35252176 , 0.15382195 , 0.17303093 , 0.09762322 , 0.09449228 , 
+ 0.21576725 ,-0.23032198 ,-0.14715175 , 0.19752809 ]
+
+cor_hl=[ 0.72835047 , 0.52040232 , 0.26770688 , 0.26374859 , 0.08752726 , 0.09209522 , 
+ 0.15659691 ,-0.37729680 ,-0.27392750 , 0.26169334 ]
+
+
+
+
+
+print( ag5  )
+quit()
+# FOR PLOT 
+#cov          = ag6
+#cov$COV.HL   = (ag5$FGSQR/ag6$NOBS) - ((ag2$FGSUM1 * ag3$FGSUM2)/(ag6$NOBS)^2)
+#cov$COV.DR.B = cov$COV.HL - ((ag4$AFGSQR/ag6$NOBS) - ((ag1$ASUM1 * ag3$FGSUM2)/(ag6$NOBS)^2))
+#cov$COV.DR.R = (ag4$AFGSQR/ag6$NOBS) - ((ag1$ASUM1 * ag3$FGSUM2)/(ag6$NOBS)^2)
+
+
+#  StatTab        = aggregate(list(Asum1   = OA1)                , list(dist=ldist), FUN=sum    )
+#  StatTab$FGsum1 = aggregate(list(FGSUM1  = FG1)                , list(dist=ldist), FUN=sum    )$FGSUM1
+#  StatTab$FGsum2 = aggregate(list(FGSUM2  = FG2)                , list(dist=ldist), FUN=sum    )$FGSUM2
+#  StatTab$AFGsqr = aggregate(list(AFGSQR  = OA1*FG2)            , list(dist=ldist), FUN=sum    )$AFGSQR
+#  StatTab$FGsqr  = aggregate(list(FGSQR   = FG1*FG2)            , list(dist=ldist), FUN=sum    )$FGSQR
+#  StatTab$num    = aggregate(list(NOBS    = FG2)                , list(dist=ldist), FUN=length )$NOBS
+
+
+
+    # COV 
+"""    ag1 = aggregate(list(ASUM1  = data$Asum1 ), by=lvar, FUN=sum )
+    ag2 = aggregate(list(FGSUM1 = data$FGsum1), by=lvar, FUN=sum )
+    ag3 = aggregate(list(FGSUM2 = data$FGsum2), by=lvar, FUN=sum )
+    ag4 = aggregate(list(AFGSQR = data$AFGsqr), by=lvar, FUN=sum )
+    ag5 = aggregate(list(FGSQR  = data$FGsqr ), by=lvar, FUN=sum )
+    ag6 = aggregate(list(NOBS   = data$num   ), by=lvar, FUN=sum )
+    # STD
+    ag7 = aggregate(list(FGSQR1 = data$FGsqr1   ), by=lvar, FUN=sum )
+    ag8 = aggregate(list(FGSQR2 = data$FGsqr2   ), by=lvar, FUN=sum )
+    ag9 = aggregate(list(ASQR1  = data$Asqr1    ), by=lvar, FUN=sum )
+
+    # Prepare statistics for plotting
+    #---------------------------------
+    # Covariance
+    cov          = ag6
+    cov$COV.HL   = (ag5$FGSQR/ag6$NOBS) - ((ag2$FGSUM1 * ag3$FGSUM2)/(ag6$NOBS)^2)
+    cov$COV.DR.B = cov$COV.HL - ((ag4$AFGSQR/ag6$NOBS) - ((ag1$ASUM1 * ag3$FGSUM2)/(ag6$NOBS)^2))
+    cov$COV.DR.R = (ag4$AFGSQR/ag6$NOBS) - ((ag1$ASUM1 * ag3$FGSUM2)/(ag6$NOBS)^2)
+
+    # Standard deviation 
+    cov$sigmaFG1 = sqrt( (ag7$FGSQR1/ag6$NOBS) - (ag2$FGSUM1/ag6$NOBS)^2 )
+    cov$sigmaFG2 = sqrt( (ag8$FGSQR2/ag6$NOBS) - (ag3$FGSUM2/ag6$NOBS)^2 )
+    cov$sigmaA1  = sqrt( (ag9$ASQR1/ag6$NOBS) - (ag1$ASUM1/ag6$NOBS)^2 )
+
+    # Correlation
+    cov$COR.HL = cov$COV.HL/(cov$sigmaFG1 * cov$sigmaFG2)
+    cov$COR.DR.R = cov$COV.DR.R/(cov$sigmaA1 * cov$sigmaFG2)
+    cov$COR.DR.B = cov$COV.DR.B/(cov$sigmaFG1 * cov$sigmaFG2)
+
+    return(cov)"""
+
+
+
+
+
+
+
+
+#OUT: COV.DR (Desroziers), COV.HL (Hollingsworth/Lonnberg)  DIST, EXP
+# R plot 
+# plot.horiz(     mondata, c("DIST"), c("COV.DR.B", "COV.DR.R","COV.HL"), legx = c("Desroziers.B", "Desroziers.R","HL"), main=paste(" var ",var, sep=""), xlab="Distance [km]", ylab=expression("Covariance [" ~ K^2 ~ "]"), LCOL.EXP=c("black"), LLWD=c(2,2,2), LLTY=c(2,1,3), LPCH=c(17,20,22), INCL0=TRUE, FIRST=1, CORR=FALSE)
+
+"""    ag1 = aggregate(list(ASUM1  = data$Asum1 ), by=lvar, FUN=sum )
+    ag2 = aggregate(list(FGSUM1 = data$FGsum1), by=lvar, FUN=sum )
+    ag3 = aggregate(list(FGSUM2 = data$FGsum2), by=lvar, FUN=sum )
+    ag4 = aggregate(list(AFGSQR = data$AFGsqr), by=lvar, FUN=sum )
+    ag5 = aggregate(list(FGSQR  = data$FGsqr ), by=lvar, FUN=sum )
+    ag6 = aggregate(list(NOBS   = data$num   ), by=lvar, FUN=sum )
+    # STD
+    ag7 = aggregate(list(FGSQR1 = data$FGsqr1   ), by=lvar, FUN=sum )
+    ag8 = aggregate(list(FGSQR2 = data$FGsqr2   ), by=lvar, FUN=sum )
+    ag9 = aggregate(list(ASQR1  = data$Asqr1    ), by=lvar, FUN=sum )"""
 
 
 
 #StatTab$FGsqr1 = aggregate(list(FGSQR1  = FG1*FG1)            , list(dist=ldist), FUN=sum )$FGSQR1
 #StatTab$FGsqr2 = aggregate(list(FGSQR2  = FG2*FG2)            , list(dist=ldist), FUN=sum )$FGSQR2
 #StatTab$Asqr1  = aggregate(list(ASQR1   = OA1*OA1)            , list(dist=ldist), FUN=sum )$ASQR1
-
-
-#  StatTab$FGsum1 = aggregate(list(FGSUM1  = FG1)                , list(dist=ldist), FUN=sum    )$FGSUM1
-#  StatTab$FGsum2 = aggregate(list(FGSUM2  = FG2)                , list(dist=ldist), FUN=sum    )$FGSUM2
-#  StatTab$AFGsqr = aggregate(list(AFGSQR  = OA1*FG2)            , list(dist=ldist), FUN=sum    )$AFGSQR
-#  StatTab$FGsqr  = aggregate(list(FGSQR   = FG1*FG2)            , list(dist=ldist), FUN=sum    )$FGSQR
-#  StatTab$num    = aggregate(list(NOBS    = FG2)                , list(dist=ldist), FUN=length )$NOBS
+#StatTab$FGsum1 = aggregate(list(FGSUM1  = FG1)                , list(dist=ldist), FUN=sum    )$FGSUM1
+#StatTab$FGsum2 = aggregate(list(FGSUM2  = FG2)                , list(dist=ldist), FUN=sum    )$FGSUM2
+#StatTab$AFGsqr = aggregate(list(AFGSQR  = OA1*FG2)            , list(dist=ldist), FUN=sum    )$AFGSQR
+#StatTab$FGsqr  = aggregate(list(FGSQR   = FG1*FG2)            , list(dist=ldist), FUN=sum    )$FGSQR
+#StatTab$num    = aggregate(list(NOBS    = FG2)                , list(dist=ldist), FUN=length )$NOBS
 
 EndTime = datetime.now()
 Duration=EndTime - StartTime
