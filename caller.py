@@ -3,6 +3,9 @@ from   ctypes import cdll , CDLL
 import numpy as np
 import geopandas as gpd
 import pandas as pd
+
+from pandas import DataFrame 
+
 from pyproj import CRS, Transformer
 
 
@@ -38,8 +41,8 @@ from pyodb  import   odbDca
 
 
 def ShowError( ):
-    os.system( "cat pyodb.stderr"   ) 
-
+    d= os.getcwd()
+    return None  
 
 
 
@@ -166,7 +169,6 @@ def haversine(lon1, lat1, lon2, lat2) :
 #os.environ["ODB_PERMANENT_POOLMASK"]="10"
 
 
-vstat=[] ; vlat=[] ; vlon=[]  ;    fg_depar_v =[];  an_depar_v=[]
 llev=False 
 #lev_range= obs["level_range"]
 #if lev_range != None :
@@ -212,32 +214,208 @@ transformer = Transformer.from_crs(wgs84_crs, wgs84_crs, always_xy=True)
 
 coord=[]
 nobs=0 
+vstat=[] ; vlat=[] ; vlon=[]  ;
+fg_depar_v =[];
+an_depar_v=[]
+obs=[]
 
 
+N=15
 for row in rows:
     obst  = row[0]
     varno = row[3]   
-    if obst ==2 and varno== 4 and row[2].strip() == "EU8478":
+    if obst ==2 and varno== 4 and row[2].strip() == "EU1137":
        nobs =nobs+1 
+       if nobs >N :
+           break 
        st,  lat , lon , an_d , fg_d , obsv =row[2],row[4],row[5],row[9],row[10],row[11]
+       vlat.append(lat)
+       vlon.append( lon )
        coord.append([transformer.transform(lon, lat)[0],transformer.transform(lon, lat)[1] ]   ) 
        vstat.append     (st   )
-       fg_depar_v.append(  fg_d )
-       an_depar_v.append(  an_d )
-
-
+       fg_depar_v.append(fg_d )
+       an_depar_v.append( an_d )
+       obs.append(  obsv )
 StartTime = datetime.now()
 
+# DISTANCES ARE COMPUTED WITH heversine method . THE ACCURACY DIFFERS 
+# FROM R (spDists   IMPLEMENTS DeMeeus method )   difference = +/- 50m 
+# IF RESULTS DIFFERENTS TEST spDist "C" source code. 
 matdist = cdist(coord, coord, metric=lambda u, v:    haversine(u[0], u[1], v[0], v[1]))
 
-# DISTANCES MATRIX 
-m=matdist.T 
+
+d1=[]
+d2=[]
+for i in range(matdist.shape[0]):
+    for j in range(matdist.shape[1]):
+        d1.append(i)
+        d2.append(j)
+
+# Swapp d1 and d2 to match the same indeces in R (  idx -1 )
+dfdist = pd.DataFrame(  {"d1"  : d2 , "d2":d1  , 
+                      "dist":matdist.reshape(matdist.shape[0]*matdist.shape[1]) }  )
+                    
+
+max_dist=100
+ndist_df=  dfdist.query("dist <=  "+str(max_dist) )
+
+
+data_df = DataFrame(   { "satid":vstat,      "lat":vlat, 
+                         "lon":vlon  , "an_depar":an_depar_v ,
+                         "fg_depar":fg_depar_v,  "obsvalue":obs}  )
+
+ndist_df['OA1'] = data_df.loc[ndist_df['d1'], 'an_depar'].values
+ndist_df['OA2'] = data_df.loc[ndist_df['d2'], 'an_depar'].values
+ndist_df['FG1'] = data_df.loc[ndist_df['d1'], 'fg_depar'].values
+ndist_df['FG2'] = data_df.loc[ndist_df['d2'], 'fg_depar'].values
+
+
+for i , j, a1  , a2  in  zip ( ndist_df.d1,  ndist_df.d2 , ndist_df.OA1,  ndist_df.OA2) :
+     print( i ,j,  a1 , a2   )
+    
+quit()
+
+
+# Spatial separation bin for OmG
+bin_int      = 10  # [km] : binning interval for pairs
+bin_max_dist = 100 # [km] : maximal distance for the bin_int
+
+# Time separation distance
+time_btw_omg = 60  # [+/- min] : time_btw_omg = time between OmG/OmA in pairs
+dist         = 10
+
+lDint = list(np.arange(bin_int, bin_max_dist +10 , bin_int ))
+cDint = list(np.arange(bin_int, bin_max_dist +10 , bin_int))
+
+# Partitions over bins inplace !
+# FOR MORE CONTINUOUS DATA , WE CAN GROUP BY dist   
+# We use the bins 10 km 
+dbin   =[0,1]+lDint
+dlabel =[0  ]+cDint
+
+
+dfdist = pd.DataFrame( {"dist":matdist.reshape(matdist.shape[0]*matdist.shape[1]),
+                        "OA1" :np.asarray(an_depar_v).reshape( matdist.shape[0]*matdist.shape[1]),
+                        "OA2" :np.asarray(an_depar_v).reshape( matdist.shape[0]*matdist.shape[1]),
+                        "FG1" :np.asarray(fg_depar_v).reshape( matdist.shape[0]*matdist.shape[1]),
+                        "FG2" :np.asarray(fg_depar_v).reshape( matdist.shape[0]*matdist.shape[1])
+                        }  ) 
+
+
+df=dfdist.query(   "dist <= "+str(  bin_max_dist  )  )
+
+lDint = list(np.arange(bin_int, bin_max_dist +10 , bin_int ))
+cDint = list(np.arange(bin_int, bin_max_dist +10 , bin_int ))
+
+pd.cut( df['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
+
+print( df ) 
+
+quit()
+
+
+
+
 
 dim1 =list(np.arange( m.shape[0]  ))
 dim2 =list(np.arange( m.shape[1]  ))
 mdist=list(m.reshape( m.shape[0]*m.shape[1]  ) )
+d1  =ReshapeList(  dim1 )
+d2  =DupList    (  dim2 )
+
+df_dist=DataFrame (  { "d1":d1 , "d2":d2 , "dist": mdist   }  )
 
 
+bin_max_dist=100 #Km
+nd_df=df_dist.query(  "dist <= "+str(bin_max_dist))
+
+
+print(  nd_df  )
+quit()
+oma1,oma2=an_depar_v, an_depar_v
+omg1,omg2=fg_depar_v, fg_depar_v
+
+df_oma1 = DataFrame ({ "d1":d1  , "d2":d2, "dist":mdist,    "FG1":omg1, "OA1":oma1 } )
+
+
+print( df_oma1  ) 
+quit()
+
+bin_max_dist=100 #Km
+nd_df=df_dist.query(  "dist <= "+str(bin_max_dist))  
+
+
+sa1 = pd.Series(an_depar_v)
+fg1 = pd.Series(fg_depar_v)
+df=pd.concat([sa1, fg1], keys=['oa1', 'fg1'])
+print( df )
+
+quit()
+
+
+
+
+oma1,oma2=an_depar_v, an_depar_v
+omg1,omg2=fg_depar_v, fg_depar_v
+
+df_oma1 = DataFrame ({ "FG1":omg1, "OA1":oma1 } )
+
+
+df=df.concat (   )
+
+quit()
+df_fa2 = DataFrame ({ "FG2":oma2, "OA2":oma2 } )
+
+df_ = nd_df.merge(df_fa1 ,  left_on='dist',right_on=True)
+
+#df_     = pd.concat([nd_df, df_fa1] ,  ignore_index=True )
+
+#    "FG1":omg1, "FG2":omg2  } ,index=[i for i in range(len(oma1)) ] )
+#df_     = pd.concat([nd_df, df_depar], axis=0).reindex(df_depar.index)
+
+print (df_ )
+quit()
+
+
+
+
+
+# Spatial separation bin for OmG
+bin_int      = 10  # [km] : binning interval for pairs
+bin_max_dist = 100 # [km] : maximal distance for the bin_int
+
+# Time separation distance
+time_btw_omg = 60  # [+/- min] : time_btw_omg = time between OmG/OmA in pairs
+dist         = 10
+
+lDint = list(np.arange(bin_int, bin_max_dist +10 , bin_int ))
+cDint = list(np.arange(bin_int, bin_max_dist +10 , bin_int))
+
+# Partitions over bins inplace !
+# FOR MORE CONTINUOUS DATA , WE CAN GROUP BY dist   
+# We use the bins 10 km 
+dbin   =[0,1]+lDint
+dlabel =[0  ]+cDint
+
+ndf=pd.DataFrame( { "OA1":oma1, "OA2":oma2 ,"FG1":omg1, "FG2":omg2  }  )
+ndf  ["dist"]=[0,0,0,0,0]
+
+nndf=ndf.query( "dist <="+ str(bin_max_dist)  )
+
+res =pd.cut( nndf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
+print( nndf    )
+#print( ndf.query() )
+quit()
+
+
+dict_={ "dist":ddist , "an_depar":oma ,   "fg_depar":omg }
+df1=pd.DataFrame(  dict_  )
+
+print( df1 )
+
+
+
+quit()
 d1  =ReshapeList(  dim1 )
 oma1=ReshapeList(   an_depar_v    )
 omg1=ReshapeList(   fg_depar_v    )
@@ -246,17 +424,17 @@ d2  =DupList    (  dim2 )
 oma2=DupList  (   an_depar_v    )
 omg2=ReshapeList(   fg_depar_v    )
 
-#lldist=DupList( lDint  ) 
-
 
 # ADD  an_depar , fg_depar
 #Same in R : OA1         OA2        FG1        FG2 (but in lower )
 df    = pd.DataFrame({"n1": d1  , "n2": d2      , "dist" :mdist ,  
-                                  "oa1":oma1    , "oa2":oma2  , 
-                                  "fg1":omg1    , "fg2":omg2  }   )
+                                  "OA1":oma1    , "OA2":oma2  , 
+                                  "FG1":omg1    , "FG2":omg2  }   )
 
 
+print( df)  
 
+quit()
 # AS IN R scripts 
 # Spatial separation bin for OmG
 bin_int      = 10  # [km] : binning interval for pairs
@@ -281,6 +459,7 @@ dlabel =[0  ]+cDint
 
 dbin_serie   =pd.cut(  subdf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
 dbin_col     =dbin_serie[0].to_list()
+# ADD dbin 
 subdf["dbin"]=dbin_col
 
 #==============================================================
@@ -301,17 +480,71 @@ subdf["dbin"]=dbin_col
 #==============================================================
 # COVARIANCE, CORRELATIONS
 
-# Agrregate 
-# SUM  :  oa1 , fg1 , fg2 
-sum_oa1 = subdf.groupby('dbin')['oa1'].sum().reset_index()
-sum_fg1 = subdf.groupby('dbin')['fg1'].sum().reset_index()
-sum_fg2 = subdf.groupby('dbin')['fg2'].sum().reset_index()
+#    R Terminology :
+#    FG1 , FG2  :  fg_depar , fg_depar (T)
+#    AO1 , AO2  :  an_depar , an_depar (T)
 
-# SUM  :   fg1*fg2
-fg1_xfg2    =  subdf["fg1"]*subdf["fg2"]     # FG1*FG2 
+#    Equivalence in  Deroziers paper :
+#    b==background 
+#    FG1  = ( D_o - D_b )
+#    FG2  = ( D_o - D_b )T
+#    AO1  = ( D_o - D_b )
+#    AO2  = ( D_o - D_b )T 
+#    NEEDED :
+#    COV 
+#    sum (   D_o - D_b )_t , 
+#    sum (   D_o - D_a)   , 
+#    sum (  [D_o - D_a] - (D_o - D_b)_t  )
+#    nobs = length (D_o - D_b ) 
+#    ----------------------------------------------------------
+#    STD 
+#    sum(  D_o -  D_b )  
+#    sum(  D_o -  D_b )_t
+#    sum(  D_o -  D_a )
+#    sum( [D_o -  D_b]^2] )
+#    sum( [D_o -  D_b )_t]^2])
+#    sum( [D_o  - D_a )]  ^2])
+
+
+# Agrregate 
+# sum[OA1]; sum[FG2] ;sum[OA1*FG2]; num[FG2]
+# USE TH SAME NOTATIONS  ( Not use upper letter for variables in python , it is an exception !)
+# SUM  :  OA1 , FG1 , FG2 
+
+
+
+# FINAL  dataframe cols in R 
+# Asum1     FGsum1     FGsum2     AFGsqr     FGsqr num    FGsqr1  FGsqr2     Asqr1
+
+#  Asum1     FGsum1      FGsum2 
+#  sum(AO1)  sum(FG1)    sum(FG2)
+sum_OA1 = subdf.groupby('dbin')['OA1'].sum().reset_index()
+sum_FG1 = subdf.groupby('dbin')['FG1'].sum().reset_index()
+sum_FG2 = subdf.groupby('dbin')['FG2'].sum().reset_index()      # OK 
+
+
+# AFGsqr      
+# AO1*FG2    
+#af12_  = subdf["OA1"]*subdf["FG2"]
+#af_    = {"OA1*FG2":af12_  ,"dbin": dbin_serie[0]}
+#af12   = pd.DataFrame( af_  ).groupby( "dbin" )[ "OA1*FG2" ].sum().reset_index()
+
+
+# SUM  :   oa1*fg2
+a1_xfg2  =subdf["OA1"]*subdf["FG2"]         # OA1*FG2 
+a1fg1_dict =  {"oa1*fg2": a1_xfg2,"dbin": dbin_serie[0]}
+
+a1fg2    = pd.DataFrame(a1fg1_dict  )
+sqrt_afg2= a1fg2.groupby( "dbin" ).sum().reset_index()
+
+print( sqrt_afg2 )
+
+quit()
+ff12    =  subdf["FG1"]*subdf["FG2"]    
+
 fg12_dict   =  {"fg1*fg2": fg1_xfg2,"dbin": dbin_serie[0]}
-fg1fg2      = pd.DataFrame(fg12_dict  )
-sqrt_fg12   =fg1fg2.groupby( "dbin").sum()
+fg1fg2      =  pd.DataFrame(fg12_dict  )
+sqrt_fg12   =  fg1fg2.groupby( "dbin").sum()
 
 
 # SUM  :   oa1*fg2
@@ -323,6 +556,14 @@ sqrt_afg2= a1fg2.groupby( "dbin" ).sum()
 
 # NOBS by bin 
 nobs    =subdf.groupby( "dbin" )["fg2"].count()
+
+
+
+
+
+
+
+
 
 # STD
 f11      =subdf["fg1"]*subdf["fg1"]        # FG1 *FG1 
@@ -366,19 +607,19 @@ ag9 = sqrt_a11 ["oa1*oa1"].sum()
 #    print( c(  monSENS$DIST ,  monSENS$COV.HL  ) )
 
 # DIST 
-d=[ 5.0000000 ,15.0000000 ,25.0000000, 35.0000000 ,45.0000000, 55.0000000 , 65.0000000 ,75.0000000 ,85.0000000, 95.0000000  ]  
+#d=[ 5.0000000 ,15.0000000 ,25.0000000, 35.0000000 ,45.0000000, 55.0000000 , 65.0000000 ,75.0000000 ,85.0000000, 95.0000000  ]  
 # DR B 
-drb=[3.5011069 , 2.4077607 , 1.5287413  ,1.1799912 , 0.3213617 , 0.3574087 , 0.2883566 ,-3.4877784 , -0.8624630 , 0.3901188 ]
+#drb=[3.5011069 , 2.4077607 , 1.5287413  ,1.1799912 , 0.3213617 , 0.3574087 , 0.2883566 ,-3.4877784 , -0.8624630 , 0.3901188 ]
 
 # DR R 
-drr=[1.6579710  ,1.2983750 ,0.6013322  ,0.5480089 , 0.4299339  ,0.4823704  ,1.2023668, -1.6624207 , -0.2441650 , 0.3772984  ]
+#drr=[1.6579710  ,1.2983750 ,0.6013322  ,0.5480089 , 0.4299339  ,0.4823704  ,1.2023668, -1.6624207 , -0.2441650 , 0.3772984  ]
 
 
 # HL 
-hl= [ 5.1590779  ,3.7061357 , 2.1300735 , 1.7280002 , 0.7512955 , 0.8397791 , 1.4907235 ,-5.1501990 ,-1.1066280 , 0.7674172  ]
+#hl= [ 5.1590779  ,3.7061357 , 2.1300735 , 1.7280002 , 0.7512955 , 0.8397791 , 1.4907235 ,-5.1501990 ,-1.1066280 , 0.7674172  ]
 
 
-
+quit()
 cor_drb = [3.5011069,  2.4077607 , 1.5287413 , 1.1799912  ,0.3213617 , 0.3574087 ,
  0.2883566, -3.4877784 ,-0.8624630 , 0.3901188   ]
 
@@ -389,10 +630,6 @@ cor_hl=[ 0.72835047 , 0.52040232 , 0.26770688 , 0.26374859 , 0.08752726 , 0.0920
  0.15659691 ,-0.37729680 ,-0.27392750 , 0.26169334 ]
 
 
-
-
-
-print( ag5  )
 quit()
 # FOR PLOT 
 #cov          = ag6
