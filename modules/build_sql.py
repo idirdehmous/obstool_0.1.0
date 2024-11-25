@@ -1,23 +1,13 @@
+#-*- codig:utf-8 -*- 
+
+
 import os ,sys  
 sys.path.insert(  0, "./modules" )
 from   ctypes     import cdll , CDLL
-
-
-
-
-
 from pyodb_extra.environment  import OdbEnv  
 from pyodb_extra.parser       import StringParser 
 
-# WHERE libodb.so  is installed  ? 
-odb_install_dir=os.getenv( "ODB_INSTALL_DIR" )
 
-# INIT ENV 
-env= OdbEnv(odb_install_dir, "libodb.so")
-env.InitEnv ()
-
-from pyodb   import   odbFetch
-from pyodb   import   odbDca
 
 
 class SqlHandler:
@@ -43,6 +33,8 @@ class SqlHandler:
         # NO query has a pressure range 
         # set it to None for the moment 
         self.p  =None 
+        self.vertco_sat = None 
+
         if self.obst != None:
            if isinstance (  self.obst, list) and len(self.obst) > 1 :
               self.otype= [ "obstype =="+str(v) for v in self.obst  ]
@@ -83,13 +75,13 @@ class SqlHandler:
         else:
            self.sensor=None 
 
-        if self.has_level:
+        if self.has_level ==True :
            if self.vtype != None :
               if self.vtype not in ["height", "pressure", "satem"]:
                  print("Vertical coordinate vertco_type can only be 'height','pressure','satem' but argument :", self.vtype  )
                  sys.exit(0)
                  
-           if self.levels != None :
+           #if self.levels != None :
               if len (self.levels) <2  or  len( self.levels ) > 2:
                  print ( "Level range must have two limites   [l1 , l2], but got argument:", self.levels  )
                  sys.exit(0)
@@ -105,10 +97,8 @@ class SqlHandler:
                  level_cond="vertco_reference_1 >="+l1+" AND vertco_reference_1 <= "+l2 
            else:
               level_cond =" "
-        else:
-           level_cond =" "
 
-        if self.has_level:
+        #if self.has_level:
            if self.p != None :
               if len (self.p) <2  or  len( self.p ) > 2:
                  print ( "Pressure levels range must have two limites   [p1 , p2 ] but got argument:", self.p )
@@ -122,30 +112,24 @@ class SqlHandler:
                  press_cond="vertco_reference_2 >="+p1+" AND vertco_reference_2 <= "+ p2 
            else:
               press_cond="  "
-        else:
-           press_cond="  "
         
         
-        if self.has_level:
+        #if self.has_level:
            if self.vertco != None :
-              print( "ToDo  , split sublist if multiple intervals "  )
-                
-             
-             # if len (self.p) <2  or  len( self.p ) > 2:
-             #    print ( "Pressure levels range must have two limites   [p1 , p2 ] but got argument:", self.p )
-             #    sys.exit(0)
-             # elif not isinstance (self.p[0], int ) or not isinstance ( self.p[1], int):
-             #    print( "One or the both pressure level limites in the list  is/are not intger(s)" )
-             #    sys.exit(0)
-             # else
-             #    p1 =str(self.p[0] )
-             #    p2 =str(self.p[1] )
-             #    press_cond="vertco_reference_2 >="+p1+" AND vertco_reference_2 <= "+ p2
-           #else:
-           #   press_cond="  "
-        #else:
-        #   press_cond="  "
-
+              #print( "ToDo  , split sublist if multiple intervals "  )
+              if self.vertco_sat != None:
+                 if len (self.vertco_sat) <2  or  len( self.vertco_sat ) > 2:
+                    print ( "Satem levels range must have two limites   [p1 , p2 ] but got argument:", self.p )
+                    sys.exit(0)
+                 elif not isinstance (self.vertco_sat [0], int ) or not isinstance ( self.vertco_sat [1], int):
+                    print( "One or the both satallite level limites in the list  is/are not intger(s)" )
+                    sys.exit(0)
+                 else:
+                    vsat1 =str(self.vertco_sat [0] )
+                    vsat2 =str(self.vertco_sat [1] )
+                    sat_cond="vertco_reference_2 >="+vsat1+" AND vertco_reference_2 <= "+ vsat2
+              else:
+                 vsat_cond="  "
 
         select_statement="SELECT  "+self.cols+" FROM " +self.tabs
         where_cond=""
@@ -176,12 +160,10 @@ class SqlHandler:
 
         query=select_statement +" WHERE "+where_cond
 
-        if   self.other !=None and len(where_cond) ==0:
+        if   self.other !=None and len(where_cond) == 0:
            query=select_statement +" WHERE  "+self.other
         elif self.other !=None and len(where_cond) > 0:
            query=select_statement +" WHERE  "+where_cond+"  AND "+self.other
-        elif self.other ==None and len(where_cond) > 0:
-           query=select_statement +" WHERE  "+where_cond
             
         return query   
 
@@ -192,63 +174,4 @@ class SqlHandler:
         nfunc  =p.ParseTokens ( query  )     # N Columns  = N pure columns + N functions in the query 
         sql    =p.CleanString ( query  ) 
         return nfunc ,  sql  
-
-
-    def FetchByObstype(self, **kwarg):
-
-
-        # ARGUMENT TO SEND TO ODB   (C Code )
-        self.query    =kwarg["sql_query" ]
-        self.queryfile=kwarg["sqlfile"   ]    
-        self.fndigit  =kwarg["fmt_float" ]
-        self.pool     =kwarg["pools"     ]
-        self.verbose  =kwarg["verbose"   ]
-        self.header   =kwarg["get_header"]
-    
-        rows=pyodbFetch(self.path  , sql_query  , nfunc , None ,None  , None , True , True    )
-        
-        return rows 
-
-
-class OdbCCMA:
-    def __init__(self):
-        return None
-
-
-
-    def FetchByObstype(self, **kwarg):
-        sq=SqlHandler()
-        # ARGUMENT TO SEND TO ODB   (C Code )
-        self.path     =kwarg["dbpath" ]
-        self.query    =kwarg["sql_query" ]
-        self.queryfile=kwarg["sqlfile"   ]
-        self.pool     =kwarg["pools"     ]
-        self.ndigits  =kwarg["fmt_float" ]
-        self.verbose  =kwarg["verbose"   ]
-        self.header   =kwarg["get_header"]
-        nfunc , sql_query = sq.CheckQuery( self.query   )
-        rows=odbFetch(self.path  , sql_query  , nfunc, self.queryfile , self.pool  , self.ndigits , self.verbose , self.header    )
-        return rows
-
-
-
-
-class OdbECMA:
-    def __init__(self):
-        return None
-
-    def FetchByObstype( self, **kwarg ):
-        sq=SqlHandler()
-        # ARGUMENT TO SEND TO ODB   (C Code )
-        self.path     =kwarg["dbpath" ]
-        self.query    =kwarg["sql_query" ]
-        self.queryfile=kwarg["sqlfile"   ]
-        self.pool     =kwarg["pools"     ]
-        self.ndigits  =kwarg["fmt_float" ]
-        self.verbose  =kwarg["verbose"   ]
-        self.header   =kwarg["get_header"]
-        nfunc , sql_query = sq.CheckQuery( self.query   )
-        rows=odbFetch(self.path  , sql_query  , nfunc, self.queryfile , self.pool  , self.ndigits , self.verbose , self.header    )
-        return rows
-
 
