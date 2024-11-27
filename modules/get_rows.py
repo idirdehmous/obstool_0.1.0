@@ -2,6 +2,7 @@ import os ,sys
 sys.path.insert(  0, "./modules" )
 from   ctypes     import cdll , CDLL
 from collections  import defaultdict  
+import numpy as np
 
 # Pyodb modules 
 from pyodb_extra.environment  import OdbEnv  
@@ -130,7 +131,7 @@ class OdbCCMA:
         dlabel =[0  ]+cDint
         dbin_serie   =cut(  ndf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
         ndf["dbin"] =dbin_serie[0]
-        #ds_dict[ob_name].append(ndf  )
+        #ds_dict[obs_name].append(ndf  )
         return  ndf """
 
 
@@ -148,34 +149,45 @@ class OdbCCMA:
         # 'an_depar@body',           9
         # 'fg_depar@body',           10
 
-        ob_name=  dobs["obs_name"]
+        obs_name = dobs["obs_name"].lower()
+        code    = dobs["codetype"]
         varno   = dobs["varno"   ]
         stats   =defaultdict(list)
         lats    =defaultdict(list)
         lons    =defaultdict(list)
         an_depar=defaultdict(list)
         fg_depar=defaultdict(list)
+
+
+
         if varno != None:
-           if isinstance (varno , int ):
-            
+           if isinstance (varno , int ):            
               int_var =varno   
-              key  =ob_name+"_"+str(int_var) 
-              for row in rows:
-                  stats[key].append   ( row[3]  )    # 3 --> statid 
+              key  =obs_name+"_"+str(int_var) 
+              for row in rows: 
+                  stats[key].append   ( row[2]  )    # 2 --> statid 
                   lats[key].append    ( row[4]  )    # 4 --> lat
                   lons[key].append    ( row[5]  )    # 5 --> lon
                   an_depar[key].append( row[9]  )    # 9 --> an_dep
                   fg_depar[key].append( row[10] )    # 10--> fg_dep 
            elif isinstance ( varno, list ):
               lst_var =varno  
-              keys=[ ob_name+"_"+str(v)  for  v   in lst_var     ]
-              for row in rows:
-                  for k in keys:
-                      stats[k].append   ( row[3]  )
-                      lats [k].append    (  row[4]  )
-                      lons [k].append    (  row[5]  )
-                      an_depar[k].append(  row[9]  )
-                      fg_depar[k].append(  row[10] )
+              keys=[ obs_name+"_v"+str(v)  for  v   in lst_var     ]
+
+
+              for k in keys:
+                  vkey=int( k[-1:]   )
+                  st_  = [row[2 ]   for row in rows  if  int(row[3]) ==vkey ]
+                  lat_ = [row[4 ]   for row in rows  if  int(row[3]) ==vkey ] 
+                  lon_ = [row[5 ]   for row in rows  if  int(row[3]) ==vkey ]
+                  an_  = [row[9 ]   for row in rows  if  int(row[3]) ==vkey ]
+                  fg_  = [row[10]   for row in rows  if  int(row[3]) ==vkey ]
+
+                  stats[k]= st_
+                  lats[k] = lat_
+                  lons[k] = lon_
+                  an_depar[k]=an_
+                  fg_depar[k]=fg_
               
            else:
               print("WARNING : Unknown type of varno ", type(varno )  )
