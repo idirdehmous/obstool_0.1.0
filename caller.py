@@ -101,14 +101,14 @@ ccma_keys=["obs_name","obstype" ,"codetype"        ,"varno"        ,"vertco_refe
 # CONV
 gnss      =["gpssol"    , 1        ,110            ,128            , None     ,None    ,None ]
 synop     =["synop"     , 1        ,[11,14,170,182],None           , None     ,None    ,None ]
-synop_var =["synop_v"   , 1        ,[11,14,170,182],[1,42,41,58,39], None     ,None    ,None ]
+synop_var =["synopv"    , 1        ,[11,14,170,182],[1,42,41,58,39], None     ,None    ,None ]
 dribu     =["dribu"     , 4        ,None           ,[1,39,41,42]   , None     ,None    ,None ]
 ascat     =["ascat"     , 9        ,None           ,None           , None     ,None    ,None ]
 radar     =["radar"     , 13       ,None           ,[29,195]       , None     ,None    ,None ]
 airep     =["airep"     , 2        ,None           ,[2,3,4]        , None     ,None    ,None ]
-airep_l   =["airep_l"   , 2        ,None           ,[2,3,4]        , None     ,None    ,[25000,35000] ]
+airep_l   =["airepl"    , 2        ,None           ,[2,3,4]        , None     ,None    ,[25000,35000] ]
 temp      =["temp"      , 5        ,None           ,[2,3,4,7]      , None     ,None    ,None ]
-temp_l    =["temp_l"    , 5        ,None           ,[2,3,4,7]      , None     ,None    ,[40000,60000] ]
+temp_l    =["templ"     , 5        ,None           ,[2,3,4,7]      , None     ,None    ,[40000,60000] ]
 
 # SAT 
 amsua   =["amsua"       , 7        ,None           ,None           , None     ,3       ,None]
@@ -143,19 +143,11 @@ tbl_env       = "/".join( tables  )
 other_sql     = "(an_depar is not NULL) AND (fg_depar is not NULL)"
 
 # Get obs_list as dict
-obs_list      =[  airep ]
-ll=[gnss, 
-synop,
-dribu,
-ascat,
-radar,
-airep,
-airep_l,
-temp,
-temp_l,
-seviri ]
-
-"""
+"""obs_list=[   gnss, radar, synop ,synop_var,
+             dribu,ascat,radar,airep,airep_l,
+             temp,
+            temp_l, 
+            seviri ]
 amsua,
 amsub,
 mhs,
@@ -168,8 +160,8 @@ seviri"""
 # THESE LINES WILL BE REPLACED BY ObstType dictionnary INSTANCE
 # BUILD OBS DICTS 
 type_         = ObsType ()  
-selected_obs  =type_.GenDict (  ccma_keys, obs_list )
-
+obs_list      = type_.ObsDict() 
+varobs        = type_.SelectObs (obs_list )   
 
 # 1- Get data from ccma( equivalence in bash script  -> "get_ccma=yes"  )
 # INSTANTIATE 
@@ -183,7 +175,7 @@ bin_int     =10
 ds_dict=defaultdict(list)
 
 def GetRows ( cdtg   ):
-    for dobs in selected_obs:
+    for dobs in obs_list:
         ccma_path ="/".join( [odb_path , cdtg  , "CCMA"] ) 
 
         # Check DCA directory  (if not there they will be created )
@@ -213,17 +205,19 @@ def GetRows ( cdtg   ):
         os.environ["ODB_SRCPATH_CCMA"] =ccma_path
         os.environ["ODB_DATAPATH_CCMA"]=ccma_path
 
+
         # SEND query & GET ROWS 
         rows =ccma.FetchByObstype (dbpath   =ccma_path , 
                                    sql_query=query  ,
                                    sqlfile  = None  ,
                                    pools    = None  ,
-                                   verbose  = False ,
-                                   get_header=False )
+                                   progress_bar=True , 
+                                   verbose  = False  ,
+                                   get_header=False , 
+                                   return_rows=True )
 
-
+        
         # START USING THE ROWS 
-
         # COORDS SHOULD BE IN WGS84 
         wgs84_crs = CRS("EPSG:4326")
         transformer = Transformer.from_crs(wgs84_crs, wgs84_crs, always_xy=True)
@@ -252,19 +246,15 @@ def GetRows ( cdtg   ):
         # 'obsvalue@body'            11
 
         # COLUMNS FOR OBSTOOL 
-        #"statid","lat","lon","an_depar","fg_depar","obsvalue"
-        ob_name=dobs["obs_name"]
-        for row in rows:
-            obst, st, varno,  lat , lon , an_d , fg_d , obsv =row[0],row[2],row[3],row[4],row[5],row[9],row[10],row[11]
-            if obst ==2 and varno ==4:
-               stats.append(st)
-               lats.append(lat)
-               lons.append(lon)
-               an_depar.append( an_d )
-               fg_depar.append( fg_d )
+        #stat , lat , lon , an_depar , fg_depar =ccma.GetByVarno ( rows , dobs  )
+        #st=stat[dobs["obs_name"]+"_"+dobs["varno"]  ]
+        #print( st ) 
+        #lats=
+
+        #ccma.LatLon2Bins ( stat[dobs["obs_name"]]  )
 
         # COORDS MATRIX 
-        matdist=pdist.MatrixDist( lons , lats    )
+        """matdist=pdist.MatrixDist( lons , lats    )
         d1=[]
         d2=[]
         for i in range(matdist.shape[0]):
@@ -305,7 +295,7 @@ def GetRows ( cdtg   ):
         dbin_serie   =cut(  ndf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
         ndf["dbin"] =dbin_serie[0]
         ds_dict[ob_name].append(ndf  )
-        return  ds_dict  
+        return  ds_dict  """
 
 
         
@@ -314,7 +304,7 @@ for cdtg in period:
 #    print (df["airep"][0] )
 
     # Init Desroziers /Hollingsworth-Lonnberg stats 
-    new_max_dist=100 # Km
+    """    new_max_dist=100 # Km
     new_bin_dist=10  # Km
     delta_t =60      # Time interval between two obs in [ min ]
     stat=DHLStat ( df_list["airep"][0] , new_max_dist , new_bin_dist, delta_t  )
@@ -342,7 +332,7 @@ for cdtg in period:
     ax3.set_xlabel( "Distance [Km]" )
 
 
-    plt.savefig("airep_v_2024010500_python.png")
+    plt.savefig("airep_v_2024010500_python.png")"""
 
 
 EndTime = datetime.now()
