@@ -46,10 +46,13 @@ class SqlHandler:
 
 
         if self.varno != None :
-           if isinstance ( self.varno , list ) :
-              # FOR THE MOMENT WE CONSIDER  ONLY "AND" CONDITION FOR  varno  !
-              self.varno =[ "varno ==" + str(v) for v in self.varno ]
-              self.varno =" OR ".join(  self.varno  ) 
+           if isinstance ( self.varno , list ):
+              # FOR THE MOMENT WE CONSIDER  ONLY "OR" CONDITION FOR  varno  !
+              if len(self.varno) ==1:
+                 self.varno="varno== "+str(self.varno[0])
+              else:
+                 self.varno =[ "varno ==" + str(v) for v in self.varno ]
+                 self.varno ="("+ " OR ".join(  self.varno  ) +")"
            elif isinstance ( self.varno , int  ):
               self.varno="varno== "+str(self.varno)
         else:
