@@ -209,11 +209,11 @@ class ObsType:
                      varobs.append( obsId )
 
 
-             #elif isinstance( code ,list) and varno == None:                 #  (list , None )
-             #     for c in code:
-             #         obsId = lst["obs_name"]+"_c"+str(c) 
-             #         if obsId not in varobs:
-             #            varobs.append(obsId) 
+             elif isinstance( code ,list) and varno == None:                 #  (list , None )
+                  for c in code:
+                      obsId = lst["obs_name"]+"_c"+str(c) 
+                      if obsId not in varobs:
+                         varobs.append(obsId) 
 
 
              elif code ==None and  isinstance( varno  , list ):      # ( None , list ) 
