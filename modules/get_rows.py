@@ -1,7 +1,8 @@
 import os ,sys  
 sys.path.insert(  0, "./modules" )
 from   ctypes     import cdll , CDLL
-from collections  import defaultdict  
+from   pandas     import DataFrame , cut 
+from   collections  import defaultdict  
 import numpy as np
 
 # Pyodb modules 
@@ -81,58 +82,75 @@ class OdbCCMA:
            return _self.rows 
 
 
-    def Latlon2Bins(self, stats , lats , lons , an_depar , fg_depar , bin_max_dist=100 , bin_int=10 ):
+
+    def Rows2Bins(self, stats , lats , lons , an_depar , fg_depar , varobs, bin_max_dist=100 , bin_int=10 ):
 
         """
         Method: Split the distance/departures matrix into 
                 bins with bins intrvals  
-                default : bin_int = 10      Km 
+                default : bin_int          = 10  Km 
                         : maximum distance = 100 Km
-
         """
-        matdist=pdist.MatrixDist( lons , lats    )
-        d1=[]
-        d2=[]
-        for i in range(matdist.shape[0]):
-              for j in range(matdist.shape[1]):
-                  d1.append(i)
-                  d2.append(j)
-        # Swap d1 and d2 to match the same indices in R (  idx -1 )
-        dfdist = DataFrame(  {"d1"  : d2 , 
-                              "d2"  : d1 ,
-                              "dist":matdist.reshape(matdist.shape[0]*matdist.shape[1]) 
+
+        list_df=[]
+        for k , v in stats.items():
+            if k in varobs:
+                vvar= [ k for i in  range(len(stats[k] )) ] 
+                stat= stats[k]
+                llat= lats[k]
+                llon= lons[k] 
+                an_d= an_depar[k]
+                fg_d= fg_depar[k] 
+                matdist=MatrixDist( llon , llat    )
+                d1=[]
+                d2=[]
+                var=[]
+                for i in range(matdist.shape[0]):
+                    for j in range(matdist.shape[1]):
+                        d1.append(i)
+                        d2.append(j)
+                        var.append( k    )
+                
+                # Swap d1 and d2 to match the same indices in R (  idx -1 )
+                dfdist = DataFrame(  {"var" : var  ,
+                                      "d1"  : d2 , 
+                                      "d2"  : d1 ,
+                                      "dist":matdist.reshape(matdist.shape[0]*matdist.shape[1]) 
                               } )
-
-        # SPLIT DF 
-        ndist_df=  dfdist.query("dist <=  "+str(bin_max_dist) )
         
-        #OTHER DATA 
-        data_df = DataFrame(   { "statid"  :stats,      
-                                 "lat"     :lats,
-                                 "lon"     :lons , 
-                                 "an_depar":an_depar ,
-                                 "fg_depar":fg_depar}  )
+                # SPLIT DF 
+                ndist_df=  dfdist.query("dist <=  "+str(bin_max_dist) )
+                
+                #OTHER DATA 
+                data_df = DataFrame(   { 
+                                         "statid"  :stat,      
+                                         "lat"     :llat,
+                                         "lon"     :llon , 
+                                         "an_depar":an_d,
+                                         "fg_depar":fg_d})
+        
+                # COPY THE DF , AVOID PANDAS WARNING. WORKING ON A SLICED DataFrame
+                ndf=ndist_df.copy()
 
+                ndf.loc[:, 'OA1'] = data_df.loc[ndf['d1'], 'an_depar'].values
+                ndf.loc[:, 'OA2'] = data_df.loc[ndf['d2'], 'an_depar'].values
+                ndf.loc[:, 'FG1'] = data_df.loc[ndf['d1'], 'fg_depar'].values
+                ndf.loc[:, 'FG2'] = data_df.loc[ndf['d2'], 'fg_depar'].values
 
-        # COPY THE DF , AVOID PANDAS WARNING. WORKING ON A SLICED DataFrame
-        ndf=ndist_df.copy()
-        ndf.loc[:, 'OA1'] = data_df.loc[ndf['d1'], 'an_depar'].values
-        ndf.loc[:, 'OA2'] = data_df.loc[ndf['d2'], 'an_depar'].values
-        ndf.loc[:, 'FG1'] = data_df.loc[ndf['d1'], 'fg_depar'].values
-        ndf.loc[:, 'FG2'] = data_df.loc[ndf['d2'], 'fg_depar'].values
+                # Binning
+                lDint = list(np.arange(bin_int, bin_max_dist +bin_int , bin_int ))
+                cDint = list(np.arange(bin_int, bin_max_dist +bin_int , bin_int))
 
-        """# Binning
-        lDint = list(np.arange(bin_int, bin_max_dist +bin_int , bin_int ))
-        cDint = list(np.arange(bin_int, bin_max_dist +bin_int , bin_int))
+                # Partitions over bins inplace !
+                # Binning by  bin_int  Km 
+                dbin   =[0,1]+lDint
+                dlabel =[0  ]+cDint
+                dbin_serie   =cut(  ndf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
+                ndf["dbin"] =dbin_serie[0]
 
-        # Partitions over bins inplace !
-        # Binning by  bin_int  Km 
-        dbin   =[0,1]+lDint
-        dlabel =[0  ]+cDint
-        dbin_serie   =cut(  ndf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
-        ndf["dbin"] =dbin_serie[0]
-        #ds_dict[obs_name].append(ndf  )
-        return  ndf """
+                list_df.append( ndf  )
+                #print( list_df ) 
+        return  list_df 
 
 
 
@@ -158,40 +176,51 @@ class OdbCCMA:
         an_depar=defaultdict(list)
         fg_depar=defaultdict(list)
 
-
-
         if varno != None:
-           if isinstance (varno , int ):            
-              int_var =varno   
-              key  =obs_name+"_"+str(int_var) 
-              for row in rows: 
-                  stats[key].append   ( row[2]  )    # 2 --> statid 
-                  lats[key].append    ( row[4]  )    # 4 --> lat
-                  lons[key].append    ( row[5]  )    # 5 --> lon
-                  an_depar[key].append( row[9]  )    # 9 --> an_dep
-                  fg_depar[key].append( row[10] )    # 10--> fg_dep 
+           if isinstance (varno , int ):               
+              vkey = obs_name+"_v"+str(varno) 
+              st_  = [row[2 ]   for row in rows  if  int(row[3]) ==varno ]
+              lat_ = [row[4 ]   for row in rows  if  int(row[3]) ==varno ]
+              lon_ = [row[5 ]   for row in rows  if  int(row[3]) ==varno ]
+              an_  = [row[9 ]   for row in rows  if  int(row[3]) ==varno ]
+              fg_  = [row[10]   for row in rows  if  int(row[3]) ==varno ]
+
+              stats[vkey]    = st_
+              lats [vkey]    = lat_
+              lons [vkey]    = lon_
+              an_depar[vkey] = an_
+              fg_depar[vkey] = fg_
+
+
            elif isinstance ( varno, list ):
-              lst_var =varno  
-              keys=[ obs_name+"_v"+str(v)  for  v   in lst_var     ]
-
-
-              for k in keys:
-                  vkey=int( k[-1:]   )
-                  st_  = [row[2 ]   for row in rows  if  int(row[3]) ==vkey ]
-                  lat_ = [row[4 ]   for row in rows  if  int(row[3]) ==vkey ] 
-                  lon_ = [row[5 ]   for row in rows  if  int(row[3]) ==vkey ]
-                  an_  = [row[9 ]   for row in rows  if  int(row[3]) ==vkey ]
-                  fg_  = [row[10]   for row in rows  if  int(row[3]) ==vkey ]
-
-                  stats[k]= st_
-                  lats[k] = lat_
-                  lons[k] = lon_
-                  an_depar[k]=an_
-                  fg_depar[k]=fg_
+              for v in varno:
+                  st_  = [row[2 ]   for row in rows  if  int(row[3]) ==v ]
+                  lat_ = [row[4 ]   for row in rows  if  int(row[3]) ==v ]
+                  lon_ = [row[5 ]   for row in rows  if  int(row[3]) ==v ]
+                  an_  = [row[9 ]   for row in rows  if  int(row[3]) ==v ]
+                  fg_  = [row[10]   for row in rows  if  int(row[3]) ==v ]
+                  k=obs_name+"_v"+str(v)
+                  stats   [k] = st_
+                  lats    [k] = lat_
+                  lons    [k] = lon_
+                  an_depar[k] = an_
+                  fg_depar[k] = fg_
               
-           else:
-              print("WARNING : Unknown type of varno ", type(varno )  )
-        return  stats,  lats , lons, an_depar , fg_depar
+        else: 
+             key=obs_name 
+             st_  = [row[2 ]   for row in rows ]
+             lat_ = [row[4 ]   for row in rows ]
+             lon_ = [row[5 ]   for row in rows ]
+             an_  = [row[9 ]   for row in rows ]
+             fg_  = [row[10]   for row in rows ]
+             stats[key]   = st_
+             lats[key]    = lat_
+             lons[key]    = lon_
+             an_depar[key]= an_
+             fg_depar[key]= fg_
+        if len( lat_ ) != 0 and len(lon_) !=0:
+           return  stats,  lats , lons, an_depar , fg_depar
+        
 
 
 
@@ -207,6 +236,7 @@ class OdbECMA:
         args=["dbpath", "sql_query", "sqlfile","pools", "fmt_float", "verbose", "get_header"]
 
         kargs=[] ; kvals=[]
+        
         for k , v in   kwarg.items():
             if k in args:
                self.path     =kwarg["dbpath"]
