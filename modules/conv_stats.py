@@ -20,7 +20,7 @@ class DHLStat:
         self.max_dist  = bdist_max  # Maxumum distance for binning in [Km]
         self.bin_int   = bin_int    # Binning interval in [Km]
         self.time_int  = time_int   # Time between OmG/OmA  pairs in [+/- min]
-        self.ndist_df  = df 
+        self.ndist_df  = df
         return None 
 
     def _mulDf(sefl,  df1 ,  df2 ):
@@ -38,7 +38,10 @@ class DHLStat:
         a1a1  =self._mulDf ( ndf.OA1  ,ndf.OA1    )
 
         # AFGsqr  FGsqr num    FGsqr1  FGsqr2    Asqr
-        df_frame = {  "d1"     :ndf.d1   ,
+        var_list=list(ndf["var"] )
+    
+        df_frame = {  "var"    :var_list ,
+                      "d1"     :ndf.d1   ,
                       "d2"     :ndf.d2   ,
                       "dist"   :ndf.dist ,
                       "dbin"   :ndf.dbin ,
@@ -62,18 +65,19 @@ class DHLStat:
         max_dist      = self.max_dist
         dist_interval = self.bin_int
 
-        stat_df=self.departuresDf  (   )
+        stat_df=self.departuresDf  (   ) 
         dbin   = [0,1]+list(np.arange(self.bin_int, self.max_dist + self.bin_int , self.bin_int ))
         dlabel = [0  ]+list(np.arange(self.bin_int, self.max_dist + self.bin_int , self.bin_int ))
 
 
         # DIVIDE BY DIST INTERVALS 
         pd.cut( stat_df['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
-
-         # NOBS  & DISTS 
+   
+        # NOBS  & DISTS 
         nobs  = stat_df.groupby( "dbin"  )["dist"].count()
         ldist = list(stat_df.groupby( "dbin"  )["dbin"].groups.keys())
-
+   
+ 
         # sum(AO1)  sum(FG1)    sum(FG2)
         # AFGsqr  ->  OA1*FG2
         # FGsqr   ->  FG1*FG2
@@ -90,8 +94,12 @@ class DHLStat:
         f2f2_sqrt= stat_df.groupby( "dbin"  ) ["FGsqr2"].sum().reset_index()
         a1a1_sqrt= stat_df.groupby( "dbin"  ) ["Asqr1" ].sum().reset_index()
 
+
         # Splitted DF by dist intervals 
-        frame_={ "nobs"  :list(nobs)  ,
+        # ADD varname column 
+        var_col=[ stat_df["var"][0] for v in range(len( oa1_sum ) ) ]
+        frame_={"var"   :var_col    , 
+                "nobs"  :list(nobs)  ,
                 "dist"  :list(ldist ) ,
                 "Asum1" :oa1_sum.OA1  ,
                 "Fsum1" :fg1_sum.FG1  ,
@@ -103,6 +111,7 @@ class DHLStat:
                  "Asqr1" :a1a1_sqrt.Asqr1
                      }
         spdf=pd.DataFrame ( frame_)
+
         return spdf 
 
     def GroupDF (self, max_ndist=None  , bin_nint=None ):
@@ -132,10 +141,10 @@ class DHLStat:
 
         # DISTANCES
         dist_list =spdf.dist.values [1:]
-
+        var_col=[ spdf["var"][0] for v in  range(len(dist_list))]
+        
         # Asum1      Fsum1      Fsum2     AFGsqr      FGsqr      FGsqr1      FGsqr2       Asqr
         d1  =spdf.groupby("dist")["Asum1" ].sum()
-        
         d2  =spdf.groupby("dist")["Fsum1" ].sum()
         d3  =spdf.groupby("dist")["Fsum2" ].sum()
         d4  =spdf.groupby("dist")["AFGsqr"].sum()
@@ -145,14 +154,15 @@ class DHLStat:
         d8  =spdf.groupby("dist")["Asqr1" ].sum()
         dobs=spdf.groupby("dist")["nobs"  ].sum()
 
-        return d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list 
+        return d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list, var_col  
 
 
     def getCovar  (self , inplace=None, max_dist=None , bin_interval =None   ):
 
 
-        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list =self.GroupDF (max_dist  , bin_interval )
-
+        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list , var_col =self.GroupDF (max_dist  , bin_interval )
+        
+        
         # HL (Holingsworth-LÖnnberg )
         t1 =  np.divide  (d5 ,dobs) 
         t2 =  np.divide  ( np.multiply(d2 ,d3  ) , np.power( dobs, 2 ))
@@ -169,15 +179,16 @@ class DHLStat:
         tr2 = np.divide  (np.multiply( d1 , d3 ) , np.power(dobs , 2 ) )
         cov_drR = np.subtract(tr1 , tr2 )
         
+
         if inplace ==True :
            return cov_hl , cov_drB, cov_drR 
-        cov={ "dist":dist_list  , "COV_HL":cov_hl , "COV_DR-B":cov_drB  , "COV_DR-R": cov_drR   }
+        cov={ "var":var_col, "dist":dist_list  , "COV_HL":cov_hl , "COV_DR-B":cov_drB  , "COV_DR-R": cov_drR   }
         return cov  
 
 
     def getSigma ( self , inplace =None ):
 
-        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list =self.GroupDF ()
+        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list , var_col=self.GroupDF ()
 
         # SIGMA FG1
         st1=np.divide( d6 , dobs)
@@ -197,7 +208,7 @@ class DHLStat:
         sigma_a1=np.sqrt( np.subtract(st1, st2  )) 
         if inplace ==True:
            return sigma_fg1 , sigma_fg2, sigma_a1 
-        sigma={ "dist":dist_list  , "sigma_fg1":sigma_fg1 , "sigma_fg2":sigma_fg2  , "sigma_a1": sigma_a1   }
+        sigma={ "var":var_col , "dist":dist_list  , "sigma_fg1":sigma_fg1 , "sigma_fg2":sigma_fg2  , "sigma_a1": sigma_a1   }
         return sigma  
 
     def getCorr (self, inplace=None ):
@@ -210,14 +221,12 @@ class DHLStat:
         cor_hl =np.divide( cov_hl , np.multiply( sfg1 , sfg2  ) )
         cor_drB=np.divide( cov_drB, np.multiply( sfg1 , sfg2  ) )
         cor_drR=np.divide( cov_drR, np.multiply( sa1  , sfg2  ) )
-        if inplace ==True:
-           return cor_hl , cor_drB , cor_drR 
-
-        return cor_hl , cor_drB  , cor_drR 
+        #if inplace ==True:
+        return cor_hl , cor_drB , cor_drR 
 
 
     def getStatFrame (self ):
-        _,_, _, _, _, _, _, _ , dobs , dist_list=self.GroupDF ()
+        _,_, _, _, _, _, _, _ , dobs , dist_list, var_col =self.GroupDF ()
         nobs=np.asarray(dobs )
         cov_hl, cov_drB, cov_drR     =self.getCovar( inplace =True )
         cor_hl, cor_drB, cor_drR     =self.getCorr ( inplace =True )
@@ -225,7 +234,8 @@ class DHLStat:
        
 
 
-        drhl_frame={ "dist"     :dist_list    , 
+        drhl_frame={ "var"      :var_col      , 
+                     "dist"     :dist_list    , 
                      "nobs"     :nobs         , 
                      "COV_HL"   :cov_hl       , 
                      "COV_DR-B" :cov_drB      ,
