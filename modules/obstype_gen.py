@@ -180,36 +180,40 @@ class ObsType:
              elif isinstance( code ,list) and isinstance( varno  ,list):  #  ( list, list)
                   for c in code:
                       for v in varno :
-                          obsId = lst["obs_name"]+"_c"+str(c)+"_v"+str(v) 
+                          #obsId = lst["obs_name"]+"_c"+str(c)+"_v"+str(v) 
+                          obsId = lst["obs_name"]+"_v"+str(v)
                           if obsId  not in varobs:
                              varobs.append( obsId   )
 
 
              elif isinstance( code , list ) and isinstance( varno  ,int):  # (list,  int
                   for c  in code:
-                          obsId = lst["obs_name"]+"_c"+str(c)+"_v"+str(lst["varno"] ) 
+                          #obsId = lst["obs_name"]+"_c"+str(c)+"_v"+str(lst["varno"] ) 
+                          obsId = lst["obs_name"]+"_v"+str(lst["varno"] )
                           if obsId  not in varobs:
                              varobs.append( obsId  )
 
 
              elif isinstance( code , int  ) and isinstance( varno  , list ): # (int , list)
                   for v   in varno:
-                        obsId =lst["obs_name"]+"_c"+str(lst["codetype"])+"_v"+str(v)
+                        #obsId =lst["obs_name"]+"_c"+str(lst["codetype"])+"_v"+str(v)
+                        obsId =lst["obs_name"]+"_v"+str(v)
                         if obsId not in varobs:
                            varobs.append( obsId )
 
 
              elif isinstance ( code, int )  and isinstance ( varno , int  ):  # (int , int ) 
-                  obsId = lst["obs_name"]+"_c"+str(code)+"_v"+str(varno)
+                  #obsId = lst["obs_name"]+"_c"+str(code)+"_v"+str(varno)
+                  obsId = lst["obs_name"]+"_v"+str(varno)
                   if obsId not in varobs:
                      varobs.append( obsId )
 
 
-             elif isinstance( code ,list) and varno == None:                 #  (list , None )
-                  for c in code:
-                      obsId = lst["obs_name"]+"_c"+str(c) 
-                      if obsId not in varobs:
-                         varobs.append(obsId) 
+             #elif isinstance( code ,list) and varno == None:                 #  (list , None )
+             #     for c in code:
+             #         obsId = lst["obs_name"]+"_c"+str(c) 
+             #         if obsId not in varobs:
+             #            varobs.append(obsId) 
 
 
              elif code ==None and  isinstance( varno  , list ):      # ( None , list ) 
@@ -225,9 +229,9 @@ class ObsType:
                      varobs.append(  obsId )
 
 
-             elif isinstance( code ,int ) and varno == None:        # (int , None ) 
-                  obsId =lst["obs_name"]+"_c"+str(lst["codetype"] ) 
-                  varobs.append ( obsId  )
+             #elif isinstance( code ,int ) and varno == None:        # (int , None ) 
+             #     obsId =lst["obs_name"]+"_c"+str(lst["codetype"] ) 
+             #     varobs.append ( obsId  )
 
 
 
