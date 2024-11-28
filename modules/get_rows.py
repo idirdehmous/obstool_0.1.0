@@ -83,6 +83,132 @@ class OdbCCMA:
 
 
 
+    def GetByVarobs(  self , rows , dobs   ):
+        # row columns & index as fetched from ODB
+
+        """# 'obstype@hdr',          0
+        # 'codetype@hdr',            1
+        # 'statid@hdr',              2
+        # 'varno@body',              3
+        # 'degrees(lat)',            4
+        # 'degrees(lon)',            5
+        # 'vertco_reference_1@body', 6
+        # 'date@hdr',                7
+        # 'time@hdr',                8
+        # 'an_depar@body',           9
+        # 'fg_depar@body',           10"""
+
+        obs_name =dobs["obs_name"].lower()
+        code     =dobs["codetype"]
+        varno    =dobs["varno"   ]
+        stats    =defaultdict(list)
+        lats     =defaultdict(list)
+        lons     =defaultdict(list)
+        an_depar =defaultdict(list)
+        fg_depar =defaultdict(list)
+
+
+        # Build a key based on varno to collect the  coords and departures  !
+        # START WITH varno !
+        if varno != None:
+           if isinstance (varno , int ):
+              vkey = obs_name+"_v"+str(varno)
+              st_  = [row[2 ]   for row in rows  if  int(row[3]) ==varno ]
+              lat_ = [row[4 ]   for row in rows  if  int(row[3]) ==varno ]
+              lon_ = [row[5 ]   for row in rows  if  int(row[3]) ==varno ]
+              an_  = [row[9 ]   for row in rows  if  int(row[3]) ==varno ]
+              fg_  = [row[10]   for row in rows  if  int(row[3]) ==varno ]
+              if len(lat_)!=0  and len(lon_)!=0  and len(an_)!=0 and len(fg_)!=0:
+                 stats[vkey]    = st_
+                 lats [vkey]    = lat_
+                 lons [vkey]    = lon_
+                 an_depar[vkey] = an_
+                 fg_depar[vkey] = fg_
+              else:
+                 print( "WARNING : Function returned empty arrays for varno : " , varno  )
+              return  stats,  lats , lons, an_depar , fg_depar
+
+
+           elif isinstance ( varno, list ):
+              for v in varno:
+                  st_  = [row[2 ]   for row in rows  if  int(row[3]) ==v ]
+                  lat_ = [row[4 ]   for row in rows  if  int(row[3]) ==v ]
+                  lon_ = [row[5 ]   for row in rows  if  int(row[3]) ==v ]
+                  an_  = [row[9 ]   for row in rows  if  int(row[3]) ==v ]
+                  fg_  = [row[10]   for row in rows  if  int(row[3]) ==v ]
+                  k=obs_name+"_v"+str(v)
+                  if len(lat_)!=0  and len(lon_)!=0  and len(an_)!=0 and len(fg_)!=0:
+                     stats   [k] = st_
+                     lats    [k] = lat_
+                     lons    [k] = lon_
+                     an_depar[k] = an_
+                     fg_depar[k] = fg_
+                  else:
+                     print("WARNING: Function returned empty arrays for varno : " , v )
+              return  stats,  lats , lons, an_depar , fg_depar
+
+
+        # No varno provided , varno =None 
+        # Build the key based on codetype 
+        elif  varno ==None and code != None:            
+            if isinstance ( code, int   ):
+               ckey = obs_name+"_c"+str(code)
+               st_  = [row[2 ]   for row in rows if int (row[1]) == code ]
+               lat_ = [row[4 ]   for row in rows if int (row[1]) == code ]
+               lon_ = [row[5 ]   for row in rows if int (row[1]) == code ]
+               an_  = [row[9 ]   for row in rows if int (row[1]) == code ]
+               fg_  = [row[10]   for row in rows if int (row[1]) == code ]
+               if len(lat_)!=0  and len(lon_)!=0  and len(an_)!=0 and len(fg_)!=0:
+                  stats    [ckey]  = st_
+                  lats     [ckey]  = lat_
+                  lons     [ckey]  = lon_
+                  an_depar [ckey]  = an_
+                  fg_depar [ckey]  = fg_
+               else:
+                  print( "WARNING: Function returned empty arrays for codetype: " , code )
+               return  stats,  lats , lons, an_depar , fg_depar
+           
+            elif isinstance ( code,  list  ):
+                for c in code:              
+                    ckey=obs_name+"_c"+str(c  )
+                    print( ckey ) 
+                    st_  = [row[2 ]   for row in rows  if  int(row[1]) ==c ]
+                    lat_ = [row[4 ]   for row in rows  if  int(row[1]) ==c ]
+                    lon_ = [row[5 ]   for row in rows  if  int(row[1]) ==c ]
+                    an_  = [row[9 ]   for row in rows  if  int(row[1]) ==c ]
+                    fg_  = [row[10]   for row in rows  if  int(row[1]) ==c ]
+                    if len(lat_)!=0  and len(lon_)!=0  and len(an_)!=0 and len(fg_)!=0:
+                       stats    [ckey]  = st_
+                       lats     [ckey]  = lat_
+                       lons     [ckey]  = lon_
+                       an_depar [ckey]  = an_
+                       fg_depar [ckey]  = fg_
+                    else:
+                        print( "WARNING: Function returned empty arrays for codetype : " , c )
+                return  stats,  lats , lons, an_depar , fg_depar
+        elif varno == None and code == None:
+             # Build dictionnary lists keys based on the obsname 
+             key=obs_name 
+             st_  = [row[2 ]   for row in rows  ]
+             lat_ = [row[4 ]   for row in rows  ]
+             lon_ = [row[5 ]   for row in rows  ]
+             an_  = [row[9 ]   for row in rows  ]
+             fg_  = [row[10]   for row in rows  ]
+             if len(lat_)!=0  and len(lon_)!=0  and len(an_)!=0 and len(fg_)!=0:
+                stats    [key]  = st_
+                lats     [key]  = lat_
+                lons     [key]  = lon_
+                an_depar [key]  = an_
+                fg_depar [key]  = fg_
+             else:
+                print( "WARNING: Function returned empty arrays for obs type : " , obs_name )
+             return  stats,  lats , lons, an_depar , fg_depar
+
+            
+
+
+
+
     def Rows2Bins(self, stats , lats , lons , an_depar , fg_depar , varobs, bin_max_dist=100 , bin_int=10 ):
 
         """
@@ -91,17 +217,17 @@ class OdbCCMA:
                 default : bin_int          = 10  Km 
                         : maximum distance = 100 Km
         """
-
         list_df=[]
-        for k , v in stats.items():
-            if k in varobs:
+        for k , v in stats.items():             
+            if k in varobs:        
                 vvar= [ k for i in  range(len(stats[k] )) ] 
                 stat= stats[k]
                 llat= lats[k]
                 llon= lons[k] 
                 an_d= an_depar[k]
                 fg_d= fg_depar[k] 
-                matdist=MatrixDist( llon , llat    )
+                matdist=MatrixDist( llon , llat   , k )
+
                 d1=[]
                 d2=[]
                 var=[]
@@ -147,80 +273,9 @@ class OdbCCMA:
                 dlabel =[0  ]+cDint
                 dbin_serie   =cut(  ndf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
                 ndf["dbin"] =dbin_serie[0]
-
                 list_df.append( ndf  )
-                #print( list_df ) 
         return  list_df 
 
-
-
-    def GetByVarno(  self , rows , dobs   ): 
-        # 'obstype@hdr',             0
-        # 'codetype@hdr',            1
-        # 'statid@hdr',              2
-        # 'varno@body',              3
-        # 'degrees(lat)',            4
-        # 'degrees(lon)',            5
-        # 'vertco_reference_1@body', 6
-        # 'date@hdr',                7
-        # 'time@hdr',                8
-        # 'an_depar@body',           9
-        # 'fg_depar@body',           10
-
-        obs_name = dobs["obs_name"].lower()
-        code    = dobs["codetype"]
-        varno   = dobs["varno"   ]
-        stats   =defaultdict(list)
-        lats    =defaultdict(list)
-        lons    =defaultdict(list)
-        an_depar=defaultdict(list)
-        fg_depar=defaultdict(list)
-
-        if varno != None:
-           if isinstance (varno , int ):               
-              vkey = obs_name+"_v"+str(varno) 
-              st_  = [row[2 ]   for row in rows  if  int(row[3]) ==varno ]
-              lat_ = [row[4 ]   for row in rows  if  int(row[3]) ==varno ]
-              lon_ = [row[5 ]   for row in rows  if  int(row[3]) ==varno ]
-              an_  = [row[9 ]   for row in rows  if  int(row[3]) ==varno ]
-              fg_  = [row[10]   for row in rows  if  int(row[3]) ==varno ]
-
-              stats[vkey]    = st_
-              lats [vkey]    = lat_
-              lons [vkey]    = lon_
-              an_depar[vkey] = an_
-              fg_depar[vkey] = fg_
-
-
-           elif isinstance ( varno, list ):
-              for v in varno:
-                  st_  = [row[2 ]   for row in rows  if  int(row[3]) ==v ]
-                  lat_ = [row[4 ]   for row in rows  if  int(row[3]) ==v ]
-                  lon_ = [row[5 ]   for row in rows  if  int(row[3]) ==v ]
-                  an_  = [row[9 ]   for row in rows  if  int(row[3]) ==v ]
-                  fg_  = [row[10]   for row in rows  if  int(row[3]) ==v ]
-                  k=obs_name+"_v"+str(v)
-                  stats   [k] = st_
-                  lats    [k] = lat_
-                  lons    [k] = lon_
-                  an_depar[k] = an_
-                  fg_depar[k] = fg_
-              
-        else: 
-             key=obs_name 
-             st_  = [row[2 ]   for row in rows ]
-             lat_ = [row[4 ]   for row in rows ]
-             lon_ = [row[5 ]   for row in rows ]
-             an_  = [row[9 ]   for row in rows ]
-             fg_  = [row[10]   for row in rows ]
-             stats[key]   = st_
-             lats[key]    = lat_
-             lons[key]    = lon_
-             an_depar[key]= an_
-             fg_depar[key]= fg_
-        if len( lat_ ) != 0 and len(lon_) !=0:
-           return  stats,  lats , lons, an_depar , fg_depar
-        
 
 
 
