@@ -53,7 +53,7 @@ odb_path="/hpcperm/cvah/tuning/odbs"
 
 # PERIOD DATES 
 bdate="2024010500"
-edate="2024010500"
+edate="2024010521"
 
 # CYCLE inc 
 cycle_inc=3 
@@ -163,6 +163,46 @@ type_         = ObsType ()
 obs_list      = type_.ObsDict() 
 varobs        = type_.SelectObs (obs_list )   
 
+
+obs_list=[
+{'obs_name': 'gpssol', 'obstype': 1, 'codetype': 110, 'varno': 128, 'vertco_reference_1': None, 'sensor': None, 'level_range': None},
+#{ "obs_name" : "synop","obstype" : 1  ,"codetype": [11, 14, 170, 182] ,"varno": None,"vertco_reference_1": None,"sensor": None,"level_range": None},]
+{'obs_name': 'synop_v', 'obstype': 1, 'codetype': [11, 14, 170, 182], 'varno': [1, 42, 41, 58, 39], 'vertco_reference_1': None, 'sensor': None, 'level_range': None},
+{'obs_name': 'dribu', 'obstype': 4, 'codetype': None, 'varno': [1, 39, 41, 42], 'vertco_reference_1': None, 'sensor': None, 'level_range': None},
+
+#{'obs_name': 'ascat', 'obstype': 9, 'codetype': None, 'varno': None, 'vertco_reference_1': None, 'sensor': None, 'level_range': None},
+{'obs_name': 'airep', 'obstype': 2, 'codetype': None, 'varno': [2, 3, 4], 'vertco_reference_1': None, 'sensor': None, 'level_range': None} ,
+{'obs_name': 'airep_l', 'obstype': 2, 'codetype': None, 'varno': [2, 3, 4], 'vertco_reference_1': None, 'sensor': None, 'level_range': [25000, 35000]}]
+
+#{'obs_name': 'radar', 'obstype': 13, 'codetype': None, 'varno': [29, 195], 'vertco_reference_1': None, 'sensor': None, 'level_range': None},]
+#{'obs_name': 'temp', 'obstype': 5, 'codetype': None, 'varno': [2, 3, 4, 7], 'vertco_reference_1': None, 'sensor': None, 'level_range': None} ]
+#{'obs_name': 'temp_l', 'obstype': 5, 'codetype': None, 'varno': [2, 3, 4, 7], 'vertco_reference_1': None, 'sensor': None, 'level_range': [40000, 60000]} ]
+#{'obs_name': 'amsua', 'obstype': 7, 'codetype': None, 'varno': None, 'vertco_reference_1': None, 'sensor': 3, 'level_range': None}
+#{'obs_name': 'amsub', 'obstype': 7, 'codetype': None, 'varno': None, 'vertco_reference_1': None, 'sensor': 4, 'level_range': None}
+#{'obs_name': 'msh', 'obstype': 7, 'codetype': None, 'varno': None, 'vertco_reference_1': None, 'sensor': '15 ', 'level_range': None}
+#{'obs_name': 'iasi', 'obstype': 7, 'codetype': None, 'varno': None, 'vertco_reference_1': None, 'sensor': 16, 'level_range': None}
+#{'obs_name': 'atms', 'obstype': 7, 'codetype': None, 'varno': None, 'vertco_reference_1': None, 'sensor': 19, 'level_range': None}
+#{'obs_name': 'mwhs', 'obstype': 7, 'codetype': None, 'varno': None, 'vertco_reference_1': None, 'sensor': 73, 'level_range': None}
+#{'obs_name': 'seviri', 'obstype': 7, 'codetype': None, 'varno': None, 'vertco_reference_1': None, 'sensor': 29, 'level_range': None}
+
+varobs=['gpssol_v128','airep_v2'  ,'airep_v3'  ,'airep_v4',
+         'synop_v_v1','synop_v_v42', 'synop_v_v41', 'synop_v_v58', 'synop_v_v39',
+        'airep_l_v2' ,'airep_l_v3','airep_l_v4', 
+        'dribu_v1'  ,'dribu_v41' ,'dribu_v42','dribu_v39' ]
+
+#, 'synop_v_v42', 'synop_v_v41', 'synop_v_v58', 'synop_v_v39']
+#, 'synop_v_v1', 'synop_v_v42', 'synop_v_v41', 'synop_v_v58', 'synop_v_v39', 'dribu_v1', 'dribu_v39', 'dribu_v41', 'dribu_v42', 'ascat', 'radar_v29', 'radar_v195', 'airep_v2', 'airep_v3', 'airep_v4', 'airep_l_v2', 'airep_l_v3', 'airep_l_v4', 'temp_v2', 'temp_v3', 'temp_v4', 'temp_v7', 'temp_l_v2', 'temp_l_v3', 'temp_l_v4', 'temp_l_v7']
+
+#obs_list=[{  "obs_name"          : "airep",
+#           "obstype"           :  2 ,
+#           "codetype"          : None,
+#           "varno"             : [2, 3, 4] ,
+#           "vertco_reference_1": None,
+#           "sensor"            : None,
+#           "level_range"       : None }]
+
+
+
 # 1- Get data from ccma( equivalence in bash script  -> "get_ccma=yes"  )
 # INSTANTIATE 
 ccma=OdbCCMA()
@@ -174,7 +214,8 @@ bin_max_dist=100
 bin_int     =10 
 ds_dict=defaultdict(list)
 
-def GetRows ( cdtg   ):
+#def GetRows ( cdtg   ):
+for cdtg in period:
     for dobs in obs_list:
         ccma_path ="/".join( [odb_path , cdtg  , "CCMA"] ) 
 
@@ -182,12 +223,11 @@ def GetRows ( cdtg   ):
         df=DCAFiles()
         df.CheckDca ( ccma_path  )
 
-
         # If required level range or not 
         llev=False 
-        lev_range= dobs["level_range"]
-        if lev_range != None :
-           llev=True 
+        #lev_range= dobs["level_range"]
+        #if lev_range != None :
+        #   llev=False  
 
         # BUILD & CHECK sql query 
         query=sql.BuildQuery(  columns   =cols     ,
@@ -199,7 +239,6 @@ def GetRows ( cdtg   ):
     
         print ("ODB date         :" ,   cdtg  ) 
         print ("Getting rows for :", dobs["obs_name"] ,  "...")
-
         # UPDATE ODB_SRCPATH & ODB_DATAPATH 
         os.environ["IOASSIGN"]=ccma_path+"/IOASSIGN"
         os.environ["ODB_SRCPATH_CCMA"] =ccma_path
@@ -216,109 +255,41 @@ def GetRows ( cdtg   ):
                                    get_header=False , 
                                    return_rows=True )
 
+        # COLUMNS FOR OBSTOOL (fist binning ) 
+        stat , lat , lon , an_depar , fg_depar =ccma.GetByVarno ( rows , dobs  )
+        list_df=ccma.Rows2Bins ( stat , lat , lon , an_depar , fg_depar , varobs )
+
+       
+        #return list_df 
         
-        # START USING THE ROWS 
-        # COORDS SHOULD BE IN WGS84 
-        wgs84_crs = CRS("EPSG:4326")
-        transformer = Transformer.from_crs(wgs84_crs, wgs84_crs, always_xy=True)
 
 
-        # LISTS 
-        nobs =0
-        coord=[]
-        stats=[] ;  lats  =[] ;  lons  =[] ;
-        fg_depar =[]; an_depar=[] ;  obsval=[]
+quit()
 
+# Desroziers /Hollingsworth-Lonnberg stats 
+new_max_dist=100  # Km
+new_bin_dist=10   # Km
+delta_t     =60   # Time interval between two obs in [ min ]
 
-        # THE COLUMNS AS WRITTEN IN THE HEADER (FROM C )
-        # R starts from 1 , python & C  index  from 0 
-        # 'obstype@hdr',             0 
-        # 'codetype@hdr',            1
-        # 'statid@hdr',              2
-        # 'varno@body',              3
-        # 'degrees(lat)',            4
-        # 'degrees(lon)',            5
-        # 'vertco_reference_1@body', 6 
-        # 'date@hdr',                7
-        # 'time@hdr',                8
-        # 'an_depar@body',           9
-        # 'fg_depar@body',           10
-        # 'obsvalue@body'            11
-
-        # COLUMNS FOR OBSTOOL 
-        #stat , lat , lon , an_depar , fg_depar =ccma.GetByVarno ( rows , dobs  )
-        #st=stat[dobs["obs_name"]+"_"+dobs["varno"]  ]
-        #print( st ) 
-        #lats=
-
-        #ccma.LatLon2Bins ( stat[dobs["obs_name"]]  )
-
-        # COORDS MATRIX 
-        """matdist=pdist.MatrixDist( lons , lats    )
-        d1=[]
-        d2=[]
-        for i in range(matdist.shape[0]):
-              for j in range(matdist.shape[1]):
-                  d1.append(i)
-                  d2.append(j)
-        # Swap d1 and d2 to match the same indices in R (  idx -1 )
-        dfdist = DataFrame(  {"d1"  : d2 , 
-                              "d2"  : d1 ,
-                              "dist":matdist.reshape(matdist.shape[0]*matdist.shape[1]) 
-                              } )
-
-        # SPLIT DF 
-        ndist_df=  dfdist.query("dist <=  "+str(bin_max_dist) )
-        
-        #OTHER DATA 
-        data_df = DataFrame(   { "satid"   :stats,      
-                                 "lat"     :lats,
-                                 "lon"     :lons , 
-                                 "an_depar":an_depar ,
-                                 "fg_depar":fg_depar}  )
-
-        # COPY THE DF , AVOID PANDAS WARNING. WORKING ON A SLICED DataFrame 
-        ndf=ndist_df.copy()
-        ndf.loc[:, 'OA1'] = data_df.loc[ndf['d1'], 'an_depar'].values
-        ndf.loc[:, 'OA2'] = data_df.loc[ndf['d2'], 'an_depar'].values
-        ndf.loc[:, 'FG1'] = data_df.loc[ndf['d1'], 'fg_depar'].values
-        ndf.loc[:, 'FG2'] = data_df.loc[ndf['d2'], 'fg_depar'].values
-
-        # Binning 
-        lDint = list(np.arange(bin_int, bin_max_dist +bin_int , bin_int ))
-        cDint = list(np.arange(bin_int, bin_max_dist +bin_int , bin_int))
-
-        # Partitions over bins inplace !
-        # Binning by  bin_int  Km 
-        dbin   =[0,1]+lDint
-        dlabel =[0  ]+cDint
-        dbin_serie   =cut(  ndf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
-        ndf["dbin"] =dbin_serie[0]
-        ds_dict[ob_name].append(ndf  )
-        return  ds_dict  """
-
-
-        
 for cdtg in period:
     df_list =GetRows (cdtg )
-#    print (df["airep"][0] )
-
-    # Init Desroziers /Hollingsworth-Lonnberg stats 
-    """    new_max_dist=100 # Km
-    new_bin_dist=10  # Km
-    delta_t =60      # Time interval between two obs in [ min ]
-    stat=DHLStat ( df_list["airep"][0] , new_max_dist , new_bin_dist, delta_t  )
-    sdf=stat.getStatFrame ()
-
-    fig, (ax1, ax2 , ax3) =  plt.subplots( 3,1  , figsize=( 10, 13 ) )
+#    for df in df_list:
+#        stat=DHLStat ( df , new_max_dist , new_bin_dist, delta_t  )
+#        sdf=stat.getStatFrame ()
+#        print( sdf ) 
 
 
+
+
+
+
+
+
+    """fig, (ax1, ax2 , ax3) =  plt.subplots( 3,1  , figsize=( 10, 13 ) )
     sdf.plot(  x="dist"  , y="COV_HL"    , ax=ax2  , label="COV_HL"   , lw=2)
     sdf.plot(  x="dist"  , y="COV_DR-B"  , ax=ax2  , label="COV_DR-B" , lw=2)
     sdf.plot(  x="dist"  , y="COV_DR-R"  , ax=ax2  , label="COV_DR-R" , lw=2)
-
     ax2.set_ylabel("Covariance [m/s]")
-
     sdf.plot(  x="dist"  , y="COR_HL"    , ax=ax1  , label="COR_HL"   , lw=2, xlabel="Distance [Km]")
     sdf.plot(  x="dist"  , y="COR_DR-B"  , ax=ax1  , label="COR_DR-B" , lw=2, xlabel="Distance [Km]")
     sdf.plot(  x="dist"  , y="COR_DR-R"  , ax=ax1  , label="COR_DR-R" , lw=2, xlabel="Distance [Km]")
@@ -330,8 +301,6 @@ for cdtg in period:
  
     sdf.plot.bar ( x="dist"   , y="nobs" , ax=ax3 , label="Nobs", color="grey")
     ax3.set_xlabel( "Distance [Km]" )
-
-
     plt.savefig("airep_v_2024010500_python.png")"""
 
 
