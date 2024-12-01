@@ -56,7 +56,7 @@ odb_path="/hpcperm/cvah/tuning/odbs"
 
 # PERIOD DATES 
 bdate="2024010500"
-edate="2024010621"
+edate="2024010500"
 
 # CYCLE inc 
 cycle_inc=3 
@@ -145,19 +145,6 @@ tables        = ["hdr","desc","body"]
 tbl_env       = "/".join( tables  )
 other_sql     = "(an_depar is not NULL) AND (fg_depar is not NULL)"
 
-# Get obs_list as dict
-"""obs_list=[   gnss, radar, synop ,synop_var,
-             dribu,ascat,radar,airep,airep_l,
-             temp,
-            temp_l, 
-            seviri ]
-amsua,
-amsub,
-mhs,
-iasi,
-atms,
-mwhs,
-seviri"""
 
 
 
@@ -196,8 +183,14 @@ obstype  =['gpssol' ,
           'temp'   ,
           'temp_l' ,
           'amsua'  ,
+          'amsub'  ,
+          'atms'   ,
+          'iasi'   ,
+          'mwhs'   ,
           'msh'    ,
           'seviri' ]
+
+obstype=['radar']
 
 # THESE LINES WILL BE REPLACED BY ObstType dictionnary INSTANCE
 # BUILD OBS DICTS 
@@ -269,11 +262,10 @@ for cdtg in period:
                                    verbose  = False  ,
                                    get_header=False  , 
                                    return_rows=True )
-
         # COLUMNS FOR OBSTOOL (first binning ) 
         stat , lat , lon , an_depar , fg_depar =ccma.GetByVarobs( rows , dobs  )
+
         list_df                                =ccma.Rows2Bins  ( stat , lat , lon , an_depar , fg_depar , varobs )
-        
         # Desroziers /Hollingsworth-Lonnberg stats 
         # Final binning option set here!
         new_max_dist=100  # Km
@@ -282,8 +274,11 @@ for cdtg in period:
         for  d in list_df:
             stat=DHLStat (  d   , new_max_dist , new_bin_dist, delta_t  )
             sdf=stat.getStatFrame ()
-#            print( sdf) 
-   
+            print( sdf) 
+            plot_stats.PlotDf  (   sdf   , "radar_29" )
+       #     del sdf
+    #del rows 
+    #del list_df 
 
 EndTime = datetime.now()
 Duration=EndTime - StartTime
