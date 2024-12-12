@@ -55,8 +55,8 @@ from pyodb   import  gcDist
 
 
 # AIREP 
-OBSTYPE = "2"
-VARNO   = "4"
+OBSTYPE = "13"
+VARNO   = "29"
 DISTANCE= "550." # Km
 
 
@@ -143,7 +143,7 @@ def BuildQuery (  sq1 , sq2    ):
 def PointSelection (  sq1 , sq2  ):
     os.environ["ODB_MAXHANDLE"]= "200"
     #print( "Process id {}  ".format(  mp.current_process())   )
-
+    print( "Extract ODB data from {} to {}  ".format( sq1, sq2 )     )
     obstype =OBSTYPE
     varno   =VARNO 
     idx     =[]
@@ -206,25 +206,35 @@ def PointSelection (  sq1 , sq2  ):
 
 
 # AIREP 
-zlat , zlon , seq  , ent  =  RefCoords ( 2 , 2  )
-row_max =len(zlat)**2 
+zlat , zlon , seq  , ent  =  RefCoords ( 13 , 29  )
+
+#
 num_proc=len(zlat)
 
 # N proc pools 
-pool_size=1
+pool_size=16
 
 print("Creating pool of worker processes")
-seqno_sets  = [[1557, 1570],] # [1570, 1580]] 
+
+# Split on chunks 
+seqno_chunks=Chunk(  seq, 32 )
+sq_sets    =[]
+for sq in seqno_chunks:
+    sq_sets.append( [sq[0], sq[-1]]   )
 
 
 # Run in prallel pool 
 with mp.Pool(processes=pool_size) as pool:
-#     out = pool.starmap(PointSelection , [(  (minlat,maxlat)   ,row_max) for  minlat , maxlat  in zip( lats , lons ) ] )
-     out = pool.starmap(PointSelection ,  [(  seq[0], seq[1]) for  seq in seqno_sets]    )
+     out = pool.starmap(PointSelection ,  [(  seq[0], seq[1]) for  seq in sq_sets]    )
 
+
+
+quit()
 # Gather arrays 
 np_arr = np.vstack(out)
 
+print( np_arr.shape ) 
+quit()
 
 # DF WOLRD !
 pd.set_option('display.max_rows',None )
@@ -278,3 +288,4 @@ def CutDf  (self, ndf   ,  bin_max_dist , bin_int):
           dbin_serie   =cut(  ndf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
           ndf["dbin"] =dbin_serie[0] 
           return ndf  
+
