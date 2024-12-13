@@ -4,6 +4,8 @@
 import os ,sys  
 sys.path.insert(  0, "./modules" )
 from   ctypes     import cdll , CDLL
+
+# pyodb   MODULES 
 from pyodb_extra.environment  import OdbEnv  
 from pyodb_extra.parser       import StringParser 
 
@@ -13,27 +15,50 @@ from pyodb_extra.parser       import StringParser
 class SqlHandler:
     def __init__(self ):
         return None 
+
     def BuildQuery(self , **kwarg ):
-        self.cols      =",".join(kwarg["columns" ])[1:]
-        self.tabs      =",".join(kwarg["tables"  ])
-        self.obs_      =kwarg["obs_dict"]
-        self.has_level =kwarg["has_levels"]
-        self.vtype     =kwarg["vertco_type"]
-        self.other     =kwarg["remaining_sql"]
-        
-        self.obs_name  =self.obs_["obs_name" ]
-        self.obst      =self.obs_["obstype" ]
-        self.ctype     =self.obs_["codetype"]
-        self.varno     =self.obs_["varno"   ]
-        self.vertco    =self.obs_["vertco_reference_1"]
-        self.levels    =self.obs_["level_range"  ]
-        #self.p         =self.obs_["pressure_range"]
-        self.sensor    =self.obs_["sensor"        ]
+
+
+        self.cols     =None 
+        self.tabs     =None 
+        self.has_level=None 
+        self.vtype    =None 
+        self.other    =None 
+
+        if kwarg["columns" ]     !=None:
+           if kwarg["columns" ] [0] != "":
+               sys.exit (0)
+           else:
+              self.cols      =",".join(kwarg["columns" ])[1:]
+        if kwarg["tables"  ]     !=None: self.tabs      =",".join(kwarg["tables"  ])
+        if kwarg["has_levels"]   !=None: self.has_level =kwarg["has_levels"]
+        if kwarg["vertco_type"]  !=None: self.vtype     =kwarg["vertco_type"]
+        if kwarg["remaining_sql"]!=None: self.other     =kwarg["remaining_sql"]
+
+        self.obs_      =None
+        self.obs_name  =None
+        self.obst      =None
+        self.ctype     =None
+        self.varno     =None
+        self.vertco    =None
+        self.levels    =None
+        self.sensor    =None 
+
+        # Check the obs dictionnary
+        if kwarg["obs_dict"]     !=None: 
+           self.obs_      =kwarg    ["obs_dict"]
+           self.obs_name  =self.obs_["obs_name" ]
+           self.obst      =self.obs_["obstype" ]
+           self.ctype     =self.obs_["codetype"]
+           self.varno     =self.obs_["varno"   ]
+           self.vertco    =self.obs_["vertco_reference_1"]
+           self.levels    =self.obs_["level_range"  ]
+           self.sensor    =self.obs_["sensor"        ]
 
         # NO query has a pressure range 
         # set it to None for the moment 
         self.p  =None 
-        self.vertco_sat = None 
+        self.vertco_sat = None  # 
 
         if self.obst != None:
            if isinstance (  self.obst, list) and len(self.obst) > 1 :
@@ -160,16 +185,14 @@ class SqlHandler:
            elif self.vtype =="pressure" and ii>0:
               where_cond  =where_cond +" AND "+press_cond
 
-
         query=select_statement +" WHERE "+where_cond
 
         if   self.other !=None and len(where_cond) == 0:
            query=select_statement +" WHERE  "+self.other
         elif self.other !=None and len(where_cond) > 0:
-           query=select_statement +" WHERE  "+where_cond+"  AND "+self.other
+           query=select_statement +" WHERE  "+where_cond+"  AND "+self.other 
             
         return query   
-
 
 
     def CheckQuery(self  , query   ):
