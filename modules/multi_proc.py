@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import  os
 import  sys
+import  re 
 import  numpy        as np 
 from    itertools    import *
 import  multiprocessing  as mp 
@@ -26,21 +27,28 @@ env.InitEnv ()
 from pyodb   import  odbFetch
 from pyodb   import  gcDist 
 
-from build_sql import    SqlHandler
-
+from build_sql   import  SqlHandler
+from obstype_gen import  ObsType 
 
 
 class MpRequest:
-    def __init__(self, dbpath , sql_query ):
+    def __init__(self, dbpath , sql_query , varobs ):
         self.dbpath = dbpath 
-        self.query=sql_query
+        self.query  = sql_query
+        self.varobs = varobs 
+
+        self.name_varno=[ (item.split("_")[0], item.split("_")[1])  for item in self.varobs ]
+        types            = ObsType ()
+        _  ,  self.varno_dict = types.ObsDict()
+
+        self.novar_dict= {}    # The reversed varno dict 
+        for k , v in self.varno_dict.items():  self.novar_dict[v]=k 
 
         return None 
 
     def ParallelEnv(self):
         ncpu      = mp.cpu_count()  
         th_info   = sys.thread_info[1]
-
         if th_info == "semaphore":
            pass 
 #        else:
@@ -52,39 +60,72 @@ class MpRequest:
         return ncpu  , th_info  
 
 
+
+    def AlterQuery ( self, sql_string ):
+        """
+        Remove orginal select statement and replece 
+        with seqno and entryno and ORDER them by seqno  
+        """
+        rr=sql_string.lower().split()                       # BE SURE THAT THE QUERY IS IN LOWER CASE
+        rj=" ".join(rr).partition('from')            # JOIN EVERYTHING AND USE "from" KEYWORD AS SEPARATOR
+        from_token = rj[1:]                          # THE SELECT STETEMENT IS AT INDEX 0
+
+        obstype_pattern =r"obstype\s*==\s*(\d+)"
+        varno_pattern   =r"varno\s*==\s*(\d+)"
+
+        var_found  =re.search (obstype_pattern, from_token[1])
+        obst_found =re.search (varno_pattern, from_token[1])
+        if var_found  and   obst_found:
+           new_sql="SELECT seqno ,entryno FROM   "+from_token[1] + "  ORDER BY  seqno"
+           print (new_sql )
+           return new_sql  
+        else:
+           return None 
+
+
     def Chunk( self, lst , chunk_size   ):
-        if len(lst)    >  int( chunk_size ):
+        if len(lst)    > chunk_size  and chunk_size >=2 :   # nchunks should be 2 at least
            return [lst[i:i+chunk_size] for i in range(0, len(lst) , int(chunk_size ) )]
-        elif len(lst)   <= int(chunk_size):
+        else:
+           #len(lst)   <= int(chunk_size):
            return lst
 
-  
-    def Seqno (self, obstype=None , varno=None ,verbose=False,  header=False , progress=True ):
-        # Get the seqno numbers of the rows entries  
-        # This query is static 
-        sql_seqno ="SELECT seqno, entryno  from hdr,body where obstype=="+str(obstype)+" and varno=="+str(varno)+" ORDER BY seqno"
-        nfunc=0
-        query_file=None 
-        pool      =None 
-        float_fmt =None
 
-        seq_rows  =odbFetch( self.dbpath ,sql_seqno  , nfunc  ,query_file, pool,float_fmt ,progress, verbose, header)
-        seqno     =[item [0]   for item in seq_rows ]
-        entryno   =[item [1]   for item in seq_rows ]
-        return seqno , entryno
+  
+    def Seqno (self  ):
+        # Get the seqno numbers of the rows & entries  
+
+        sql_seqno=  self.AlterQuery(self.query )  
+        query_file=None 
+        nfunc=0 
+        pool      =None 
+        fmt_float =None
+        progress  =True 
+        verbose   =False 
+        header    =False 
+        try:
+           seq_rows  =odbFetch( self.dbpath ,sql_seqno  , nfunc  ,query_file ,pool ,fmt_float,progress, verbose  , header)
+           seqno     =[item [0]   for item in seq_rows ]
+           entryno   =[item [1]   for item in seq_rows ]
+           return seqno, entryno 
+        except:
+           Exception 
+           print("Failed to fetch the number of rows in the SQL statement " )
+           sys.exit (1)
 
 
     def SelectBySeqno   (self, sq1,sq2  ):
         os.environ["ODB_MAXHANDLE"]= "200"
-#        print( "Process id {}  ".format(  mp.current_process())  , sq1, sq2  )
+        print( "Process id {}  ".format(  mp.current_process())  , "seqno rows range :",  sq1, sq2  )
 #        print( "Extract ODB data from {} to {}  ".format( sq1, sq2 )     )
         idx     =[]
         dates   =[]
         nfunc    =0
         query_file=None 
         pool     = None   
+        
         float_fmt= None 
-        progress = True            
+        progress = False 
         verbose  = False   
         header   = False 
 
@@ -101,20 +142,26 @@ class MpRequest:
                   progress , 
                    verbose , 
                     header  
-                    )
+                              )
 
         # Handle rows 
+        keys=[]    # 
         lats=[]
         lons=[]
         an_d=[]
         fg_d=[]
-        for row in rows:
+        name= self.name_varno[0][0]
+        for row in rows:            
+
+            key=name+"_"+self.varno_dict[row[3] ] 
+            if key  not in keys:
+               keys.append(key ) 
             lats.append(row[4])
             lons.append(row[5])
             an_d.append(row[9 ] )
             fg_d.append(row[10] )
 
-        # Compute distances 
+        # Compute distances matrix  
         dist=gcDist ( lons , lats , len(lats )     )
 
         # Build a numpy array 
@@ -139,45 +186,57 @@ class MpRequest:
            data_arr = np.array( data  ).T
         else:
            data_arr    =None 
-
-        return  data_arr 
-
+        return  data_arr
 
 
 
-    def DispatchQuery(self , **kwargs):
-       obstype  =kwargs["obstype" ]
-       varno    =kwargs["varno"   ] 
-       nchunk   =kwargs["nchunks" ]
-       nproc    =kwargs["nproc"   ]
 
-
+    def DispatchQuery(self , nchunk=4 , nproc=4 ):
        
        # N proc pools 
        # Set default parameters 
-       pool_size=nproc 
        ncpu     =self.ParallelEnv()[0]
-
-       if kwargs["nchunks"] != None: self.ncpu      =ncpu
-       if kwargs["nproc" ]  != None: self.pool_size =ncpu 
+       pool_size=nproc 
 
        # Split into chunks 
-       seq,_  = self.Seqno (  obstype , varno , False,  False ,   True   )
+       seq , _  = self.Seqno ()
        seqno_chunks=self.Chunk(  seq, nchunk    )
-       
+
+       seqno_chunks=[ [207726 , 207976] ]
+       print( seqno_chunks ) 
        sq_sets    =[]
+       is_sublist =False 
        for sq in seqno_chunks:
-           if isinstance ( sq , list ):
-              sq_sets.append( [sq[0], sq[-1]]   )
+            if isinstance ( sq , list ):
+               sq_sets.append( [sq[0], sq[-1]]   )
+               is_sublist =True 
 
-       if len( sq_sets )==0:
-           sq_sets.append(min(seqno_chunks) )
-           sq_sets.append( max(seqno_chunks) )
-      
-
+       if is_sublist==False:
+          if len( sq_sets )==0 or nchunk == 1:    # Simple list no sublist
+              sq_sets.append(min(seqno_chunks) )
+              sq_sets.append(max(seqno_chunks) )
+       elif seqno_chunks ==None:
+          is_sublist =False 
+          print("Failed to split the seqno list into chunks " )
+          sys.exit (0)
+           
+       
+   
        # Run in prallel pools (of processes not ODB pools !!!)
-       with mp.Pool(processes=pool_size) as pool:
-            out = pool.starmap(self.SelectBySeqno  ,  [(  seq[0], seq[1]) for  seq in sq_sets]    )
+       if nchunk >1    and  nproc  > 1 :   # Parallel
+           with mp.Pool(processes=pool_size) as pool:
+                out = pool.starmap(self.SelectBySeqno  ,  [(  seq[0], seq[1]) for  seq in sq_sets]    )
+                return out 
 
-       return out 
+       if is_sublist ==True and nproc == 1  :   # Process chunks in sequential  !
+          for ll in sq_sets:
+              out = self.SelectBySeqno ( ll [0] , ll[-1]   )
+              return out
+
+       elif is_sublist ==False and  nproc==1:   # Simple list and cpu ==1    #
+              out=self.SelectBySeqno ( sq_sets[0] , sq_sets[1] )
+              return out 
+       elif sublist ==False and nproc !=1:
+           print("Can't process one seqno chunk on multiple CPU(s)  ,NOT IMPLEMENTED YET !" )
+           sys.exit (0)
 
