@@ -4,7 +4,7 @@ class ObsType:
   Class: Contains the  necessary obs list to run 
          obstool , Jarvinen and Desroziers diags 
          NOT FINISHED !
-         MAYBE IT HAS TO SPLITTED INTO DATA CATEGORIES !
+         MAYBE IT HAS TO BE SPLITTED INTO DATA CATEGORIES !
  """
 
  def _init__(self, obs_name=None  ):
@@ -21,15 +21,15 @@ class ObsType:
            "sensor"            : None,
            "level_range"       : None         } ,
  
-         { "obs_name"          : "synop",
-           "obstype"           : 1  ,
-           "codetype"          : [11, 14, 170, 182] ,
-           "varno"             : None,
-           "vertco_reference_1": None,
-           "sensor"            : None,
-           "level_range"       : None          },
+       #  { "obs_name"          : "synop",
+       #    "obstype"           : 1  ,
+       #    "codetype"          : [11, 14, 170, 182] ,
+       #    "varno"             : None,
+       #    "vertco_reference_1": None,
+       #    "sensor"            : None,
+       #    "level_range"       : None          },
  
-         { "obs_name"          :  "synop_v",
+         { "obs_name"          :  "synop",
            "obstype"           : 1 ,
            "codetype"          : [11, 14, 170, 182] ,
            "varno"             : [1, 42, 41, 58, 39],
@@ -56,20 +56,22 @@ class ObsType:
         {  "obs_name"          : "radar",
            "obstype"           : 13,
            "codetype"          : None,
-           "varno"             : [29, 195],
+           "varno"             : 29 , 
+ #           "varno"             : [29, 195],
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None            },
  
         {  "obs_name"          : "airep",
-           "obstype"           :  2 ,
+           "obstype"           :  3 ,
            "codetype"          : None,
-           "varno"             : [2, 3, 4] ,
+#           "varno"             : [2, 3, 4] ,
+           "varno"             :  2 ,
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None           },
  
-        {  "obs_name"          : "airep_l",
+        {  "obs_name"          : "airepl" ,
            "obstype"           : 2 ,
            "codetype"          : None,
            "varno"             : [2, 3, 4],
@@ -85,7 +87,7 @@ class ObsType:
            "sensor"            : None,
            "level_range"       : None           },
  
-         { "obs_name"          : "temp_l",
+         { "obs_name"          : "templ" ,
            "obstype"           : 5 ,
            "codetype"          : None,
            "varno"             : [2, 3, 4, 7] ,
@@ -148,7 +150,27 @@ class ObsType:
            "vertco_reference_1": None,
            "sensor"            : 29,
            "level_range"       : None      }   ]
-    return self.obs_list
+
+
+    self.varno_dict ={  128: "ztd"  ,  # gpssol Zenith total delay 
+                        1  :  "z"   ,  # geopotential 
+                       42  :  "u"   ,  # 10m wind speed u
+                       41  :  "v"   ,  # 10m wind speed v
+                       58  :  "h"   ,  # 2 relative humidity
+                       39  :  "t"   ,  # 2 meter temperature 
+                       2   :  "t"   ,  # T temperature       (upper air)
+                       3   :  "u"   ,  # U component of wind (upper air)
+                       4   :  "v"   ,  # V component of wind (upper air)
+                       7   :  "q"   ,  # specific humidity 
+                       29  :  "rh"  ,  # upper rh (radar)
+                      195  :  "dw"     # Dopp radial wind 
+                }
+
+
+    return self.obs_list , self.varno_dict 
+
+
+
 
 
  def UpdateDict():
@@ -166,6 +188,9 @@ class ObsType:
 
      varobs=[]
      self.list    = list_
+     _, var_dict  = self.ObsDict()
+
+
      for lst in self.list  :
          for k, v in lst.items():
              code =lst["codetype"]
@@ -181,7 +206,7 @@ class ObsType:
                   for c in code:
                       for v in varno :
                           #obsId = lst["obs_name"]+"_c"+str(c)+"_v"+str(v) 
-                          obsId = lst["obs_name"]+"_v"+str(v)
+                          obsId = lst["obs_name"]+"_"+var_dict[v]
                           if obsId  not in varobs:
                              varobs.append( obsId   )
 
@@ -189,7 +214,7 @@ class ObsType:
              elif isinstance( code , list ) and isinstance( varno  ,int):  # (list,  int
                   for c  in code:
                           #obsId = lst["obs_name"]+"_c"+str(c)+"_v"+str(lst["varno"] ) 
-                          obsId = lst["obs_name"]+"_v"+str(lst["varno"] )
+                          obsId = lst["obs_name"]+"_"+var_dict[varno] 
                           if obsId  not in varobs:
                              varobs.append( obsId  )
 
@@ -197,14 +222,14 @@ class ObsType:
              elif isinstance( code , int  ) and isinstance( varno  , list ): # (int , list)
                   for v   in varno:
                         #obsId =lst["obs_name"]+"_c"+str(lst["codetype"])+"_v"+str(v)
-                        obsId =lst["obs_name"]+"_v"+str(v)
+                        obsId =lst["obs_name"]+"_"+var_dict[v]
                         if obsId not in varobs:
                            varobs.append( obsId )
 
 
              elif isinstance ( code, int )  and isinstance ( varno , int  ):  # (int , int ) 
                   #obsId = lst["obs_name"]+"_c"+str(code)+"_v"+str(varno)
-                  obsId = lst["obs_name"]+"_v"+str(varno)
+                  obsId = lst["obs_name"]+"_"+var_dict[varno]
                   if obsId not in varobs:
                      varobs.append( obsId )
 
@@ -218,13 +243,13 @@ class ObsType:
 
              elif code ==None and  isinstance( varno  , list ):      # ( None , list ) 
                   for v in varno:
-                      obsId =lst["obs_name"]+"_v"+str(v) 
+                      obsId =lst["obs_name"]+"_"+var_dict[v]
                       if obsId not in varobs:
                          varobs.append(obsId) 
 
 
              elif code ==None and  isinstance( varno  , int ):      # (None , int )
-                  obsId = lst["obs_name"]+"_v"+str(lst["varno"] ) 
+                  obsId = lst["obs_name"]+"_"+var_dict[lst["varno"] ]
                   if obsId not in varobs:
                      varobs.append(  obsId )
 
