@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from itertools import  *
-
+import re 
 
 sys.path.insert(0, "/hpcperm/cvah/tuning/ww_oslo/pyodb_1.1.0/build/lib.linux-x86_64-cpython-310" )
 
@@ -28,8 +28,6 @@ from pyodb  import   odbDca
 
 # obstool modules
 from build_sql            import SqlHandler  
-from point_dist           import MatrixDist    #, Dims     #, DupList , ReshapeList , getIndex1, getIndex2
-from obstype_gen          import ObsType
 from multi_proc           import MpRequest
 
 
@@ -42,7 +40,8 @@ class OdbCCMA:
     def FetchByObstype(self, **kwarg):
 
         # ARGUMENT TO SEND, GET ROWS 
-        args=["dbpath"    , 
+        args=["varobs" ,
+              "dbpath"    , 
               "sql_query" , 
               "sqlfile"   ,
               "pools"     , 
@@ -50,11 +49,14 @@ class OdbCCMA:
               "verbose"   , 
               "get_header", 
               "progress_bar" , 
-              "return_rows"]
+              "return_rows",
+              "nchunk"    ,
+              "nproc"]
         
         kargs=[] ; kvals=[]
         for k , v in   kwarg.items(): 
             if k in args:
+               self.varobs   =kwarg["varobs"]
                self.path     =kwarg["dbpath"]
                self.query    =kwarg["sql_query" ]
                self.queryfile=kwarg["sqlfile"   ]    
@@ -63,46 +65,26 @@ class OdbCCMA:
                self.header   =kwarg["get_header"]
                self.pbar     =kwarg["progress_bar"]
                self.rrows    =kwarg["return_rows"]
+               self.nchunk   =kwarg["nchunk"    ]
+               self.nproc    =kwarg["nproc"     ]
                self.fmt_float=None 
             else:
               print("Unexpected argument :" , k)
 
-        sql=SqlHandler ()
+
+        sql=SqlHandler()
         nfunc , sql_query = sql.CheckQuery( self.query   )  
-        
-        mq=MpRequest (self.path ,  sql_query )
 
-# 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# THES VARIABLES ARE HARDCODED !!
-#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        rows=mq.DispatchQuery( obstype=2 , varno=4 , nchunks=8, nproc=8)
+        mq=MpRequest (self.path ,  sql_query, self.varobs  )        
+        nchunks=self.nchunk
+        nproc  =self.nproc 
 
-        #rows=  odbFetch(self.path  , 
-        #                sql_query  , 
-        #                nfunc      , 
-        #                self.queryfile , 
-        #                self.pool , 
-        #                self.fmt_float , 
-        #                self.pbar ,
-        #                self.verbose , 
-        #                self.header  )
-        #if self.rrows:
-        #   return rows 
-        #else:
-        #   _self.rows=rows 
-        #   return _self.rows 
+        rows=mq.DispatchQuery( nchunk=nchunks, nproc=nproc)
 
         return rows 
-    # ADD DATE/CYCLE  
-    def SetDate (self, cdtg, n ):
-        dt_format="%Y%m%d-%H:%M:%S"
-        yymd= cdtg[:-2]
-        hh  = cdtg[-2:]
-        hhms= hh + ":00:00"
-        dt=yymd+"-"+hhms
-        date_list =[  datetime.strptime( dt , dt_format  ) for i in range(n ) ] # or lats , lons 
-        return date_list 
+
+
+
 
 
 
