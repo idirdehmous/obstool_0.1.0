@@ -58,7 +58,7 @@ StartTime = datetime.now()
 
 
 # PATH: contains   YYYYMMDDHH/CCMA 
-odb_path="/hpcperm/cvah/tuning/odbs"
+odb_path="/mnt/HDS_ALD_TEAM/ALD_TEAM/idehmous/depot_tampon/METCOOP_ODB"
 
 # PERIOD DATES 
 bdate="2024010500"
@@ -141,7 +141,7 @@ obstype=[ 'gpssol' ,
           'seviri' ]
 
 
-obstype=['radar']
+obstype=['airep']
 
 # THESE LINES WILL BE REPLACED BY ObstType dictionnary INSTANCE
 # BUILD OBS DICTS 
@@ -171,7 +171,7 @@ bin_int     =10
 
 
 
-pd.set_option('display.max_rows',20)
+pd.set_option('display.max_rows',30)
 
 all_data =defaultdict(list)
 
@@ -194,12 +194,12 @@ def ProcessData(  cdtg , obs_dict   ):
        llev=True 
 
     # BUILD & CHECK sql query 
-    query=sql.BuildQuery(  columns       =cols     ,
-                             tables        =tables   ,
-                               obs_dict      =dobs     ,
-                               has_levels    =llev     ,
-                               vertco_type   ="height" ,   
-                               remaining_sql=other_sql )
+    query=sql.BuildQuery(       columns       =cols      ,
+                                tables        =tables    ,
+                                obs_dict      =dobs      ,
+                                has_levels    =llev      ,
+                                vertco_type   ="height"  ,   
+                                remaining_sql =other_sql )
    
     print ("ODB date         :" ,   cdtg  ) 
     print ("Getting rows for :", dobs["obs_name"] ,  "...")
@@ -211,37 +211,35 @@ def ProcessData(  cdtg , obs_dict   ):
 
 
     # SEND query & GET ROWS 
-    data_arr =ccma.FetchByObstype ( varobs    = varobs    , 
-                                        
-            dbpath      =ccma_path , 
-                                        sql_query  =query     ,
-                                       sqlfile     = None     ,
-                                       pools       = None     ,
-                                       progress_bar=False     , 
-                                       verbose     = False    ,
-                                       get_header =False     ,                                 
-                                       return_rows =True      ,
-                                       nchunk      = 16 , 
-                                       nproc       = 8  )
-    arr = np.vstack( data_arr )
-    # Return it as DF 
+    data_arr =ccma.FetchByObstype ( varobs    = varobs      , 
+                                     dbpath      =ccma_path , 
+                                     sql_query  =query      ,
+                                     sqlfile     = None     ,
+                                     pools       = None     ,
+                                     progress_bar=False     , 
+                                     verbose     = False    ,
+                                     get_header =False      ,                                 
+                                     return_rows =True      ,
+                                     nchunk      = 2        , 
+                                     nproc       = 2     )
+
+    # Return data_array as DF 
     colnames=[ "d1","d2","dist" , "OA1", "OA2" , "FG1", "FG2"]
-    df_data = pd.DataFrame( arr, columns = colnames )
+    df_data = pd.DataFrame( data_arr, columns = colnames )
     var_col =[]
     dte_col =[]
     var_col.append(   [dobs["obs_name"]   for i in range(len(df_data)) ] )
     dte_col.append(   [cdtg   for i in range(len(df_data)) ] )
-    df_data ["var" ]=var_col[0] 
-    df_data ["date"]=dte_col[0]
+    df_data ["var" ] =var_col[0] 
+    df_data ["date"] =dte_col[0]
+
     return  df_data 
-         
+
 df_list=[]
 for cdtg in period:
     for dobs in obs_list:
         df_data =ProcessData (cdtg  , dobs )
         df_list.append(df_data)
-
-
 
 new_max_dist=100  # Km
 new_bin_dist=10   # Km
@@ -256,10 +254,10 @@ for df in df_list:
     cdf      = rdf.CutDf(    df_dist    ,   bin_max_dist , bin_int )
     sp     = SplitDf    (cdf)
     sub_df = sp.SubsetDf(   )
-    stat=DHLStat (  sub_df  , new_max_dist , new_bin_dist , delta_t )
 
+    stat=DHLStat (  sub_df  , new_max_dist , new_bin_dist , delta_t )
     print( stat.getStatFrame ()  )
-    plot_stats.PlotDf  ( stat.getStatFrame ()  , "airep_t" )
+    plot_stats.PlotDf  ( stat.getStatFrame ()  , "airep_v" )
 
 
 
