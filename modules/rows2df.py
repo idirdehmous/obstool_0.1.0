@@ -30,7 +30,6 @@ class DfFromRows:
              
           # COPY THE DF , AVOID PANDAS WARNING. WORKING ON A SLICED DataFrame
           ndf=ndist_df.copy()
-
           ndf.loc[:, 'varname'] = data_df.loc[ndf['d1'], 'var'].values
           ndf.loc[:, 'date']= data_df.loc[ndf['d1'],     'date'].values.astype('int32')
           ndf.loc[:, 'OA1'] = data_df.loc[ndf['d1'], 'an_depar'].values.astype('float32')
@@ -50,8 +49,13 @@ class DfFromRows:
           dbin   =[0,1]+lDint
           dlabel =[0  ]+cDint
           dbin_serie   =cut(  ndf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
-          ndf["dbin"] =dbin_serie[0] 
-          return ndf  
+          nndf = ndf.copy()  # Create a copy explicitly
+          nndf["dbin"] = dbin_serie[0]
+          #ndf["dbin"]  =list(dbin_serie[0] )
+#          ndf["dbin"] = dbin_serie[0].iloc[0].tolist()
+#          ndf=ndf.copy()
+#          ndf.loc[ndf.dbin]=dbin_serie  #.values.
+          return nndf  
 
 
 
