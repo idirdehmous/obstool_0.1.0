@@ -80,7 +80,6 @@ class OdbCCMA:
         nproc  =self.nproc 
 
         rows=mq.DispatchQuery( nchunk=nchunks, nproc=nproc)
-
         return rows 
 
 
