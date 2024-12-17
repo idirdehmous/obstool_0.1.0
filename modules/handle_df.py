@@ -3,6 +3,26 @@ import pandas as pd
 import numpy  as np 
 
 
+
+class Bins:
+    def __init__(self):
+        return None 
+
+    def CutByBins  (self, ndf   ,  bin_max_dist , bin_int):
+        lDint = list(np.arange(bin_int, bin_max_dist +bin_int , bin_int ))
+        cDint = list(np.arange(bin_int, bin_max_dist +bin_int , bin_int))
+                                              
+        # Partitions over bins inplace !
+        # Binning by  bin_int  Km 
+        dbin   =[0,1]+lDint
+        dlabel =[0  ]+cDint           
+        dbin_serie   =pd.cut(  ndf['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
+        nndf = ndf.copy()  # Create a copy explicitly               
+        nndf["dbin"] = dbin_serie[0]                               
+        return nndf  
+
+
+
 class SplitDf:
     """
         Class : Contains methods to split and group 
@@ -35,8 +55,7 @@ class SplitDf:
         # AFGsqr  FGsqr num    FGsqr1  FGsqr2    Asqr
         #var_list=list(ndf["var"] )
     
-        df_frame = { # "var"    :var_list ,
-                     # "date"   :ndf.date  , 
+        df_frame = {
                       "d1"     :ndf.d1   ,
                       "d2"     :ndf.d2   ,
                       "dist"   :ndf.dist ,
@@ -67,6 +86,7 @@ class SplitDf:
         # DIVIDE BY DIST INTERVALS 
         pd.cut( stat_df['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
    
+
         # NOBS  & DISTS 
         nobs  = stat_df.groupby( "dbin"  )["dist"].count()
         ldist = list(stat_df.groupby( "dbin"  )["dbin"].groups.keys())
@@ -94,9 +114,7 @@ class SplitDf:
         #var_col=[ stat_df["var" ][0] for v in range(len( oa1_sum ) ) ]
         #dte_col=[ stat_df["date"][0] for v in range(len( oa1_sum ) ) ]
 
-        frame_={#"var"   :var_col      , 
-          #      "date"  :dte_col      ,
-                "nobs"  :list(nobs)   ,
+        frame_={"nobs"  :list(nobs)   ,
                 "dist"  :list(ldist ) ,
                 "Asum1" :oa1_sum.OA1  ,
                 "Fsum1" :fg1_sum.FG1  ,
