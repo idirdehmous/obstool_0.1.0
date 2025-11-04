@@ -1,0 +1,1 @@
+class sat_stat
