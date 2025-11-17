@@ -50,11 +50,10 @@ class DHLStat:
 
     def getCov(self , var , inplace=None  ):
         #d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list , dte_col =self.gp.GroupByBins (self.merged_df , self.dist_max  ,self.bin_int )
-        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list =self.gp.DataByBins (self.merged_df , self.dist_max  ,self.bin_int )
+        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list =self.gp.GroupByBins (self.merged_df , self.dist_max  ,self.bin_int )
         
         # Nobs 
         nobs=np.asarray(dobs )
-
         # Varname 
         #var_col= pd.Series ( [str(var )] * 10  )
         # HL (Holingsworth-LÖnnberg )
