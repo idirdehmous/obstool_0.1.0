@@ -3,13 +3,13 @@ import sys , os
 
 class ObsType:
       """
-      Class: Contains the  necessary obs list to run 
-         obstool , Jarvinen and Desroziers diags 
+      Class: Contains the  parameter names and other attributes 
       """
 
       def _init__(self):
           # ObsType lists 
-          self.conv_obs=[    'gpssol' ,
+          self.conv_obs=[    
+                        'gpssol' ,
                         'synop'  ,
                         'dribu'  ,
                         'airep'  ,
@@ -17,7 +17,8 @@ class ObsType:
                         'radar'  ,
                         'temp'   ,
                         'templ'  ]
-          self.sat_obs = [    'amsua'  ,
+          self.sat_obs = [    
+                         'amsua'  ,
                          'amsub'  ,    
                          'atms'   ,   
                          'iasi'   ,
@@ -34,6 +35,7 @@ class ObsType:
           # CONVENTIONAL  
           self.obs_conv=[
 
+         # SURFACE 
          {"obs_name"            : "gpssol",
            "obstype"           : 1  ,
            "codetype"          : 110 , 
@@ -41,24 +43,70 @@ class ObsType:
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None         } ,
- 
- 
-         { "obs_name"          :  "synop",
+         { "obs_name"          :  "synop_z",
            "obstype"           : 1 ,
            "codetype"          : [11, 14, 170, 182] ,
-           "varno"             : [1, 42, 41, 58, 39],
+           "varno"             :  1,
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None          },
- 
-         { "obs_name"          : "dribu",
+         { "obs_name"          :  "synop_v",
+           "obstype"           : 1 ,
+           "codetype"          : [11, 14, 170, 182] ,
+           "varno"             : 42,
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None          },
+         { "obs_name"          :  "synop_u",
+           "obstype"           : 1 ,
+           "codetype"          : [11, 14, 170, 182] ,
+           "varno"             : 41,
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None          },
+         { "obs_name"          :  "synop_rh",
+           "obstype"           : 1 ,
+           "codetype"          : [11, 14, 170, 182] ,
+           "varno"             : 58, 
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None          },
+         { "obs_name"          :  "synop_t",
+           "obstype"           : 1 ,
+           "codetype"          : [11, 14, 170, 182] ,
+           "varno"             : 39,                 
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None          },
+         { "obs_name"          : "dribu_z",
            "obstype"           : 4 ,
            "codetype"          : None,
            "varno"             : [1, 39, 41, 42],
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None          },
- 
+            { "obs_name"          : "dribu_t",
+           "obstype"           : 4 ,
+           "codetype"          : None,
+           "varno"             : 39,
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None          },
+            { "obs_name"          : "dribu_u",
+           "obstype"           : 4 ,
+           "codetype"          : None,
+           "varno"             : 41,             
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None          },
+            { "obs_name"          : "dribu_v",
+           "obstype"           : 4 ,
+           "codetype"          : None,
+           "varno"             : 42,             
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None          },
+
          { "obs_name"          : "ascat",
            "obstype"           : 9 ,
            "codetype"          : None,
@@ -66,47 +114,133 @@ class ObsType:
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None           } ,
- 
-        {  "obs_name"          : "radar",
+         # RADAR 
+        {  "obs_name"          : "radar_rh",
            "obstype"           : 13,
            "codetype"          : None,
-            "varno"             : [29, 195],
+            "varno"            : 29,
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None            },
- 
-        {  "obs_name"          : "airep",
+       {  "obs_name"           : "radar_dow",
+           "obstype"           : 13,
+           "codetype"          : None,
+            "varno"            : 195 ,
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None            },
+
+
+       # UPPER AIR 
+        {  "obs_name"          : "airep_t",
            "obstype"           :  2 ,
            "codetype"          : None,
-           "varno"             : [2, 3, 4] ,
+           "varno"             : 2 ,
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None           },
- 
-        {  "obs_name"          : "airepl" ,
+        {  "obs_name"          : "airep_u",
+           "obstype"           :  2 ,
+           "codetype"          : None,
+           "varno"             : 3, 
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None           },
+        {  "obs_name"          : "airep_v",
+           "obstype"           :  2 ,
+           "codetype"          : None,
+           "varno"             : 4 ,
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None           },
+
+
+        {  "obs_name"          : "airepl_t" ,
            "obstype"           : 2 ,
            "codetype"          : None,
-           "varno"             : [2, 3, 4],
+           "varno"             : 2,
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : [25000, 35000] },
- 
-         { "obs_name"          : "temp",
+        {  "obs_name"          : "airepl_u" ,
+           "obstype"           : 2 ,
+           "codetype"          : None,
+           "varno"             : 3,
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : [25000, 35000] },
+        {  "obs_name"          : "airepl_v" ,
+           "obstype"           : 2 ,
+           "codetype"          : None,
+           "varno"             : 4, 
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : [25000, 35000] },
+
+         { "obs_name"          : "temp_t",
            "obstype"           : 5,
            "codetype"          : None,
-           "varno"             : [2, 3, 4, 7],
+           "varno"             : 2,
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None           },
- 
-         { "obs_name"          : "templ" ,
-           "obstype"           : 5 ,
+         { "obs_name"          : "temp_u",
+           "obstype"           : 5,
            "codetype"          : None,
-           "varno"             : [2, 3, 4, 7] ,
+           "varno"             : 3,
            "vertco_reference_1": None,
            "sensor"            : None,
-           "level_range"       : [40000, 60000]} ]
-     
+           "level_range"       : None           },
+         { "obs_name"          : "temp_v",
+           "obstype"           : 5,
+           "codetype"          : None,
+           "varno"             : 4, 
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None           },
+         { "obs_name"          : "temp_q",
+           "obstype"           : 5,
+           "codetype"          : None,
+           "varno"             :  7, 
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : None           },
+
+
+ 
+         { "obs_name"          : "templ_t" ,
+           "obstype"           : 5 ,
+           "codetype"          : None,
+           "varno"             : 2,  
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : [40000, 60000]} , 
+
+         { "obs_name"          : "templ_u" ,
+           "obstype"           : 5 ,
+           "codetype"          : None,
+           "varno"             :  3, 
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : [40000, 60000]} , 
+
+         { "obs_name"          : "templ_v" ,
+           "obstype"           : 5 ,
+           "codetype"          : None,
+           "varno"             : 4, 
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : [40000, 60000]} ,
+         { "obs_name"          : "templ_q" ,
+           "obstype"           : 5 ,
+           "codetype"          : None,
+           "varno"             : 7,
+           "vertco_reference_1": None,
+           "sensor"            : None,
+           "level_range"       : [40000, 60000] }  ]
+
+    
+         # Varno dict 
           self.varno_dict ={ 128 : "ztd"  ,  # gpssol Zenith total delay 
                        1   :  "z"   ,  # geopotential 
                        42  :  "u"   ,  # 10m wind speed u
@@ -120,14 +254,26 @@ class ObsType:
                        29  :  "rh"  ,  # upper rh (radar)
                       195  :  "dw"     # Dopp radial wind 
                       }
-          return self.obs_conv  , self.varno_dict
+          self.unit= { 
+                       128 :  "m"     ,  # gpssol Zenith total delay  
+                       1   :  "mgp"   ,  # geopotential 
+                       42  :  "m/s"   ,  # 10m wind speed u
+                       41  :  "m/s"   ,  # 10m wind speed v
+                       58  :  "%"   ,    # 2 relative humidity
+                       39  :  "K"   ,    # 2 meter temperature 
+                       2   :  "K"   ,    # T temperature       (upper air)
+                       3   :  "m/s"   ,  # U component of wind (upper air)
+                       4   :  "m/s"   ,  # V component of wind (upper air)
+                       7   :  "g/kg"   , # specific humidity 
+                       29  :  "%"  ,     # upper rh (radar)
+                      195  :  "m/s"      # Dopp radial wind 
+                  }
+          return self.obs_conv  , self.varno_dict , self.unit 
  
 
       def RenameVarno (self, string_var  ):
           dict_={}
           obslist , dict_            = self.ConvDict()
-          #if obs_kind == 'satem':  obslist , _, _, _, dict_   = self.SatDict ()
-         
 
           obsname=[  dobs["obs_name"] for dobs in obslist  ]
           name      =    string_var.split("_")[0]
@@ -139,50 +285,16 @@ class ObsType:
 
       def SelectConv(self, list_   ):
           varobs=[]
+
+          if not isinstance  ( list_ ):
+             print("Parameter list must a python list")
+             sys.exit ()
           self.list          = list_
-          obs_list, var_dict =self.ConvDict()
-          for lst in self.list  :
-            for k, v in lst.items():
-              code =lst["codetype"]
-              varno=lst["varno"   ]
-              if  code == None and varno == None:
-                 if lst["obs_name"] not in varobs:
-                    varobs.append( lst["obs_name"] )
-                 else:
-                    continue              
-              elif isinstance( code ,list) and isinstance( varno  ,list):  #  ( list, list)
-                  for c in code:
-                      for v in varno :
-                          obsId = lst["obs_name"]+"_"+var_dict[v]
-                          if obsId  not in varobs:
-                             varobs.append( obsId   )
-              elif isinstance( code , list ) and isinstance( varno  ,int):  # (list,  int
-                  for c  in code:
-                          obsId = lst["obs_name"]+"_"+var_dict[varno] 
-                          if obsId  not in varobs:
-                             varobs.append( obsId  )
-              elif isinstance( code , int  ) and isinstance( varno  , list ): # (int , list)
-                  for v   in varno:
-                        obsId =lst["obs_name"]+"_"+var_dict[v]
-                        if obsId not in varobs:
-                           varobs.append( obsId )
-              elif isinstance ( code, int )  and isinstance ( varno , int  ):  # (int , int ) 
-                  obsId = lst["obs_name"]+"_"+var_dict[varno]
-                  if obsId not in varobs:
-                     varobs.append( obsId )
-              elif isinstance( code ,list) and varno == None:                 #  (list , None )
-                  for c in code:
-                      obsId = lst["obs_name"]+"_c"+str(c) 
-                      if obsId not in varobs:
-                         varobs.append(obsId) 
-              elif code ==None and  isinstance( varno  , list ):      # ( None , list ) 
-                  for v in varno:
-                      obsId =lst["obs_name"]+"_"+var_dict[v]
-                      if obsId not in varobs:
-                         varobs.append(obsId) 
-              elif code ==None and  isinstance( varno  , int ):      # (None , int )
-                  obsId = lst["obs_name"]+"_"+var_dict[lst["varno"] ]
-                  if obsId not in varobs:
-                     varobs.append(  obsId )
-          return  varobs  , obs_list
+
+          obs_list, var_dict , var_unit  =self.ConvDict()
+
+
+
+          for lst in self.list:
+              print( lst ) 
 
