@@ -1,18 +1,27 @@
-#-*- codig:utf-8 -*- 
+# -*- coding:utf-8 -*- 
 import os ,sys  
+
+# From pyodb  
 from pyodb_extra  import StringParser 
-
-
 
 
 __all__=["SqlHandler"]
 
 
+
 class SqlHandler:
+    """
+    Class : @ Parse the different observation dictionaries and build the 
+              SQL query according to obstype, codetype, varno , sensor and level range  
+            @ Checks the SQL statement before sending. 
+    """
     def __init__(self ):
+
+        # For the moment !
         self.obstool_select=None 
-        self.derozie_select=None
-        self.jarvine_select=None
+
+        #self.derozie_select=None
+        #self.jarvine_select=None
         return None 
 
 
@@ -125,6 +134,6 @@ class SqlHandler:
 
     def CheckQuery(self  , query   ):
         p      =StringParser()
-        nfunc  =p.ParseTokens ( query  )     # N Columns  = N pure columns + N functions in the query 
+        nfunc  =p.ParseTokens ( query  )     # N Columns=N pure columns - N functions in the query 
         sql    =p.CleanString ( query  ) 
         return nfunc ,  sql 
