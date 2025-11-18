@@ -1,13 +1,17 @@
+# -*-coding:utf-8 -*-
 import sys , os 
 
 
 class ObsType:
       """
-      Class: Contains the  parameter names and other attributes 
+      Class: Contains the  variable names and their attributes  
+             NOTE : ONLY THE CONV DATA ARE PROCESSED IN THIS VERSION  !
       """
 
       def _init__(self):
           # ObsType lists 
+          # Init the observation lists : Conventional and Satem  
+          
           self.conv_obs=[    
                         'gpssol' ,
                         'synop'  ,
@@ -27,14 +31,12 @@ class ObsType:
                          'seviri' ]
           return None 
 
-
-
-
-
       def ConvDict(self) :
           # CONVENTIONAL  
           self.obs_conv=[
 
+
+         # MAYBE WILL BE CHANGED TO A LIST AND LOOP . We will see !
          # SURFACE 
          {"obs_name"            : "gpssol",
            "obstype"           : 1  ,
@@ -153,8 +155,6 @@ class ObsType:
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None           },
-
-
         {  "obs_name"          : "airepl_t" ,
            "obstype"           : 2 ,
            "codetype"          : None,
@@ -176,7 +176,6 @@ class ObsType:
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : [25000, 35000] },
-
          { "obs_name"          : "temp_t",
            "obstype"           : 5,
            "codetype"          : None,
@@ -205,9 +204,6 @@ class ObsType:
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None           },
-
-
- 
          { "obs_name"          : "templ_t" ,
            "obstype"           : 5 ,
            "codetype"          : None,
@@ -215,7 +211,6 @@ class ObsType:
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : [40000, 60000]} , 
-
          { "obs_name"          : "templ_u" ,
            "obstype"           : 5 ,
            "codetype"          : None,
@@ -223,7 +218,6 @@ class ObsType:
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : [40000, 60000]} , 
-
          { "obs_name"          : "templ_v" ,
            "obstype"           : 5 ,
            "codetype"          : None,
@@ -254,6 +248,8 @@ class ObsType:
                        29  :  "rh"  ,  # upper rh (radar)
                       195  :  "dw"     # Dopp radial wind 
                       }
+
+          # Add Units  
           self.unit= { 
                        128 :  "m"     ,  # gpssol Zenith total delay  
                        1   :  "mgp"   ,  # geopotential 
@@ -274,27 +270,17 @@ class ObsType:
       def RenameVarno (self, string_var  ):
           dict_={}
           obslist , dict_            = self.ConvDict()
-
           obsname=[  dobs["obs_name"] for dobs in obslist  ]
           name      =    string_var.split("_")[0]
           vr        =int(string_var.split("_")[1] )
           vname     =name + "_"+ dict_[vr]
           return vname 
 
-
-
       def SelectConv(self, list_   ):
           varobs=[]
-
           if not isinstance  ( list_ ):
              print("Parameter list must a python list")
              sys.exit ()
           self.list          = list_
-
           obs_list, var_dict , var_unit  =self.ConvDict()
-
-
-
-          for lst in self.list:
-              print( lst ) 
 
