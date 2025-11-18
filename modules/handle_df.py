@@ -1,16 +1,17 @@
 #-*-coding:utf-8 -*- 
 import pandas as pd 
 import numpy  as np 
+from   itertools import repeat 
+ 
 
 
+
+__all__=["SplitDf", "ConcatDf", "GroupDf"]
 
 
 class SplitDf:
     """
-        Class : Contains methods to split and group 
-                the rows from distance dataframe 
-
-
+        Class :@Split and subset  DF 
     """
     def __init__ (self,dfdist , var , cdtg ,  bdist_max=100  , bin_int=10 , time_int=60 ):
         self.max_dist  = bdist_max  # Maxumum distance for binning in [Km]
@@ -36,6 +37,7 @@ class SplitDf:
         f1f1   =self._mulDf ( ndf.FG1  ,ndf.FG1    )
         f2f2   =self._mulDf ( ndf.FG2  ,ndf.FG2    )
         a1a1   =self._mulDf ( ndf.OA1  ,ndf.OA1    )
+        a1f1   =self._mulDf ( ndf.OA1  ,ndf.FG1    )
 
         df_frame = {  "d1"     :ndf.d1   ,
                       "d2"     :ndf.d2   ,
@@ -44,7 +46,7 @@ class SplitDf:
                       "OA2"    :ndf.OA2  ,
                       "FG1"    :ndf.FG1  ,
                       "FG2"    :ndf.FG2  ,
-                      "AFGsqr" :a1f2, 
+                      "AFGsqr" :a1f1, 
                       "FGsqr"  :f1f2,
                       "FGsqr1" :f1f1, 
                       "FGsqr2" :f2f2,
@@ -99,8 +101,8 @@ class SplitDf:
         dte_col=[ self.cdtg for v in range(len( oa1_sum ) )  ]
 
 
-        frame_={  "var"    :var_col      , 
-                  "date"   :dte_col      ,
+        frame_={"var"    :var_col      , 
+                "date"   :dte_col      ,
                 "nobs"   :list(nobs)   ,
                 "dist"   :list(ldist ) ,
                 "Asum1"  :oa1_sum.OA1  ,
@@ -119,65 +121,68 @@ class SplitDf:
 
 
 
-
-
-
 class ConcatDf:
+    """
+    Class : @Concat DF 
+    """
     def __init__(self ):
         return None 
 
     def ConcatByDate (self, sub_df  ):
         merged_dict={}
         merged_df  =pd.DataFrame ()
-
         for k , v in  sub_df.items():
             merged_df    =pd.concat ( v )
-            merged_dict[k]=merged_df  
+            merged_dict[k]=merged_df.reset_index().drop(columns =["index"])
         return merged_dict
 
 
-
-
-
-
 class GroupDf:
+    """
+    Class : Group DF  
+    """
     def __init__(self  ):
         return None 
 
-    def GroupByBins (self, merged_df    , new_max_dist=100  , new_bin_int=10 ):
-        self.max_ndist    =100
-        self.bin_ninterval=10 
+    def GroupByBins (self, merged_df    , max_dist=100  ,  bin_int =10 ):
+        self.max_ndist    = max_dist
+        self.bin_ninterval= bin_int
 
-        if new_max_dist != 100:
-           self.max_ndist     =  new_max_dist
-        if new_bin_int != 10 :
-           self.bin_ninterval =  new_bin_dist
+        if max_dist != 100:
+           self.max_ndist     =  max_dist
+        if bin_int != 10 :
+           self.bin_ninterval =  bin_int
 
         d_bins    = [ int(i) for i in   np.arange(0,self.max_ndist     + self.bin_ninterval    ,self.bin_ninterval )  ]
         d_label   = [ int(i) for i in   np.arange(self.bin_ninterval/2 , self.max_ndist+self.bin_ninterval  -(self.bin_ninterval/2) , self.bin_ninterval)  ]
 
-        
+
         # DIVIDE BY DIST INTERVALS 
-        #sd=pd.cut( merged_df ['dist'], bins=d_bins , labels=d_label , right=True, include_lowest=False)
-#       merged_df ["dist"]
-        
+        merged_df['dist'] = pd.cut( merged_df ['dist'], bins=d_bins , labels=d_label )
+
+        merged_df.dropna( inplace=True )  
+
+        # Needed Columns:Asum1,FGsum1,FGsum2,AFGsqr, FGsqr, FGsqr1, FGsqr2, Asqr
+        d1  =merged_df.groupby("dist", observed=False)["Asum1"  ].sum()
+        d2  =merged_df.groupby("dist", observed=False)["FGsum1" ].sum()
+        d3  =merged_df.groupby("dist", observed=False)["FGsum2" ].sum()
+        d4  =merged_df.groupby("dist", observed=False)["AFGsqr" ].sum()
+        d5  =merged_df.groupby("dist", observed=False)["FGsqr"  ].sum()
+        d6  =merged_df.groupby("dist", observed=False)["FGsqr1" ].sum()
+        d7  =merged_df.groupby("dist", observed=False)["FGsqr2" ].sum()
+        d8  =merged_df.groupby("dist", observed=False)["Asqr1"  ].sum()
+        dobs=merged_df.groupby("dist", observed=False)["nobs"   ].sum()
+
         # Distances 
-        dist_list =merged_df["dist"].values 
+        dist_list =merged_df ["dist"]
+        # Var 
+        var_col   =merged_df["var" ]
         
-        # Asum1      FGsum1      FGsum2     AFGsqr      FGsqr      FGsqr1      FGsqr2       Asqr
-        d1  =merged_df.groupby("dist")["Asum1" ].sum()
-        d2  =merged_df.groupby("dist")["FGsum1" ].sum()
-        d3  =merged_df.groupby("dist")["FGsum2" ].sum()
-        d4  =merged_df.groupby("dist")["AFGsqr"].sum()
-        d5  =merged_df.groupby("dist")["FGsqr" ].sum()
-        d6  =merged_df.groupby("dist")["FGsqr1"].sum()
-        d7  =merged_df.groupby("dist")["FGsqr2"].sum()
-        d8  =merged_df.groupby("dist")["Asqr1" ].sum()
-        dobs=merged_df.groupby("dist")["nobs"  ].sum()
-
         # Date 
-        #sdate=min( merged_df["date"] )
-        #edate=max( merged_df["date"] )
-        #dte_col=[str(sdate) +"_"+str( edate )  for i  in  range(len(dobs)) ]
+        sdate=min( merged_df["date"] )
+        edate=max( merged_df["date"] )
+        dte_col=[str(sdate) +"_"+str( edate )  for i  in  range(len(dobs)) ]
 
-        return d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list   #, dte_col  
+        # Send the prepared DF to 
+        # compute the obstool statistics 
+        return d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list , dte_col, var_col 
