@@ -87,7 +87,16 @@ class DHLStat:
                                    "period"   :lperiod  ,
                                    "COV_HL"   :cov_hl   ,
                                    "COV_DR-B" :cov_drB  ,
-                                   "COV_DR-R" :cov_drR  } )
+                                   "COV_DR-R" :cov_drR  } ).astype( {
+                                                             "nobs"    :"int32"   ,
+                                                             "var"     :"category",
+                                                             "period"  :"category",
+                                                             "dist"    :"float32" ,
+                                                             "COV_HL"  :"float32" ,
+                                                             "COV_DR-B":"float32" ,
+                                                             "COV_DR-R":"float32"
+                                                             })
+
         df_cov       = df_cov.reset_index(drop=True)    # Remove mdist as an index  
 
 
@@ -135,7 +144,15 @@ class DHLStat:
                                "sigma_fg1": sigma_fg1  ,
                                "sigma_fg2": sigma_fg2  ,
                                "sigma_a1" : sigma_a1
-                                })
+                                }).astype( {   "nobs"     :"int32"   ,
+                                                "var"     :"category",
+                                              "period"    :"category",
+                                               "dist"     :"float32" ,
+                                               "sigma_fg1":"float32" ,
+                                               "sigma_fg2":"float32" ,
+                                               "sigma_a1" :"float32"
+                                                             })
+
         df_sig       = df_sig.reset_index(drop=True)    # Remove mdist as an index  
 
 
@@ -178,7 +195,15 @@ class DHLStat:
                      "COR_HL"   : cor_hl       ,
                      "COR_DR-R" : cor_drR      ,
                      "COR_DR-B" : cor_drB
-                } )
+                              } ).astype( {   "nobs":"int32"   ,
+                                              "var" :"category",
+                                            "period":"category",
+                                              "dist":"float32" ,
+                                         "COR_HL"   :"float32" ,
+                                         "COR_DR-R" :"float32" ,
+                                         "COR_DR-B" :"float32"
+                                                             })
+
 
         df_cor       = df_cor.reset_index(drop=True)    # Remove mdist as an index  
 
@@ -224,6 +249,21 @@ class DHLStat:
                   }
 
         # Return statistics DF 
-        stat_frame =pd.DataFrame (   drhl_frame  )
+        stat_frame =pd.DataFrame (   drhl_frame  ).astype({
+                                              "dist":"float32" ,
+                                              "nobs":"int32"   ,     
+                                              "var" :"category",      
+                                            "period":"category",      
+                                         "COV_HL"   :"float32" ,      
+                                         "COV_DR-R" :"float32" ,      
+                                         "COV_DR-B" :"float32" ,
+                                         "sigma_FG1":"float32" ,      
+                                         "sigma_FG2":"float32" ,      
+                                         "sigma_a1" :"float32" ,   
+                                         "COR_HL"   :"float32" ,      
+                                         "COR_DR-R" :"float32" ,      
+                                         "COR_DR-B" :"float32"      
+                                                             })
+
         stat_frame       = stat_frame.reset_index(drop=True)    # Remove mdist as an index  
         return stat_frame      # To be plotted   !!!
