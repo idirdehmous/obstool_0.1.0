@@ -184,8 +184,8 @@ class OdbReader:
 
                    # Progress bar & Verbosity inside pyodb  
                    # Progress bar is very useful for huge ODBs
-                   if vrb in [3 ] : verbose= True 
-                   if vrb in [1,2]: pbar   = False 
+                   if vrb in [3  ]: verbose= True 
+                   if vrb in [2,3]: pbar   = True 
 
                    try:
                       rows=   odbDict (cma_path  ,
@@ -258,7 +258,7 @@ class Rows2Df :
            # ARGS order  :  lons1, lats1, lon2, lat2 : Compute distances between latlon pairs 
            dist      =  odbGcdistance ( lons, lats, lons, lats  )
            dist_1d   =  dist.reshape  ( len(lats)**2            )
-           
+
            # Indices
            d1, d2 = zip(*product(range(len(lats)), repeat=2))
 
@@ -275,9 +275,19 @@ class Rows2Df :
                                    "FG1" :fg2 , 
                                    "FG2" :fg1} 
                                    )
+           # Optimze a little 
+           df_dist = df_dist.astype({
+                       "d1"  : "int32"  , 
+                       "d2"  : "int32"  ,
+                       "dist": "float32",
+                       "OA1" : "float32", 
+                       "OA2" : "float32",
+                       "FG1" : "float32", 
+                       "FG2" : "float32"
+             })
+
           
-           df_dist_ =  df_dist [df_dist["dist"] <= max_dist ]
-           return df_dist_ 
+           return  df_dist [df_dist["dist"] <= max_dist ]
 
     def PrepDf   (self , dlist ):                         
         # Concat dfs by  vars  
