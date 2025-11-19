@@ -51,12 +51,18 @@ class DHLStat:
 
 
     def getCov(self , var , inplace=None  ):
-        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list, dte, var =self.gp.GroupByBins (self.merged_df , self.dist_max  ,self.bin_int )
-
+        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , _ ,  dt1, dt2 , var =self.gp.GroupByBins (self.merged_df , self.dist_max  ,self.bin_int )
+        
+        # Bins distances 
+        dist_list = d1.index.to_list() 
+        
+        # Var list and period  
+        lvar    = [var]* len(dist_list)
+        lperiod = [ str(dt1) +"_"+str(dt2) for _ in range(len( dist_list ))  ]       
+        
         # Nobs 
-        nobs=np.asarray(dobs )
+        nobs=list(dobs )
 
-        # Varname 
         # HL (Holingsworth-LÖnnberg )
         t1 =  np.divide  (d5 ,dobs) 
         t2 =  np.divide  ( np.multiply(d2 ,d3  ) , np.power( dobs, 2 ))
@@ -75,26 +81,35 @@ class DHLStat:
 
         # Covariances 
         df_cov =  pd.DataFrame ({ 
-                                  "var"     : list(var), 
-                                  "period"  : list(dte), 
-                                  "nobs"    : nobs     , 
-                                  "dist"    : list(dist_list),  
-                                  "COV_HL"  : cov_hl   ,
-                                  "COV_DR-B": cov_drB  ,
-                                  "COV_DR-R": cov_drR  } )
+                                   "dist"     :dist_list,
+                                   "nobs"     :nobs     ,
+                                   "var"      :lvar     ,
+                                   "period"   :lperiod  ,
+                                   "COV_HL"   :cov_hl   ,
+                                   "COV_DR-B" :cov_drB  ,
+                                   "COV_DR-R" :cov_drR  } )
+        df_cov       = df_cov.reset_index(drop=True)    # Remove mdist as an index  
+
 
         if inplace ==True :
-           return cov_hl , cov_drB, cov_drR  # inside the class 
+           return cov_hl , cov_drB, cov_drR   # inside the class 
         else: 
            return df_cov  
         
 
     def getSig  ( self , var , inplace =None ):
 
-        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , dist_list, dte, var  =self.gp.GroupByBins (self.merged_df , self.dist_max  ,self.bin_int )
+        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , _ ,  dt1, dt2 , var   =self.gp.GroupByBins (self.merged_df , self.dist_max  ,self.bin_int )
 
+        # Bins distances 
+        dist_list = d1.index.to_list() 
+        
+        # Var list and period  
+        lvar    = [var]* len(dist_list)
+        lperiod = [ str(dt1) +"_"+str(dt2) for _ in range(len( dist_list ))  ]       
+        
         # Nobs 
-        nobs = np.asarray( dobs )
+        nobs=list(dobs )
 
         # SIGMA FG1
         st1=np.divide( d6 , dobs)
@@ -112,45 +127,60 @@ class DHLStat:
         st1=np.divide( d8 ,dobs )
         st2=np.divide( d1 ,dobs )**2
         sigma_a1=np.sqrt( np.subtract(st1, st2  )) 
-        df_sig =pd.DataFrame({ 
-                               "var"      : list(var)  ,                
-                               "period"   : list(dte)  ,
-                               "nobs"     : nobs       ,
-                               "dist"     : list(dist_list)  ,
+        df_sig =pd.DataFrame({              
+                               "dist"     :dist_list   ,
+                               "nobs"     :nobs        ,
+                               "var"      :lvar        ,
+                               "period"   :lperiod     ,
                                "sigma_fg1": sigma_fg1  ,
                                "sigma_fg2": sigma_fg2  ,
                                "sigma_a1" : sigma_a1
                                 })
+        df_sig       = df_sig.reset_index(drop=True)    # Remove mdist as an index  
+
+
         if inplace ==True:
-           return sigma_fg1 , sigma_fg2, sigma_a1    # used inside the class 
+           return sigma_fg1 , sigma_fg2, sigma_a1  # used inside the class 
         else:
            return df_sig
 
 
     def getCor (self,var ,  inplace=None ):
-        _,_, _, _, _, _, _, _ , dobs , dist_list, dte, var  =self.gp.GroupByBins (self.merged_df , self.dist_max  ,self.bin_int )
+        d1 ,_, _ , _ , _ , _ , _ , _ , dobs , _ ,  dt1, dt2 , var  =self.gp.GroupByBins (self.merged_df , self.dist_max  ,self.bin_int )
+
+
+        # Bins distances 
+        dist_list = d1.index.to_list()
+
+        # Var list and period  
+        lvar    = [var]* len(dist_list)
+        lperiod = [ str(dt1) +"_"+str(dt2) for _ in range(len( dist_list ))  ]
+        
+        # Nobs 
+        nobs=list(dobs )
+
+        # COV & Sigma 
         cov_hl, cov_drB, cov_drR =self.getCov  ( var , inplace =True )
         sfg1 , sfg2 , sa1        =self.getSig  ( var , inplace =True )
 
-        # N obs 
-        nobs=np.asarray( dobs )
 
-        # CORRELATIONS
-        cor_hl =np.divide( cov_hl , np.multiply( sfg1 , sfg2  ) )
-        cor_drB=np.divide( cov_drB, np.multiply( sfg1 , sfg2  ) )
-        cor_drR=np.divide( cov_drR, np.multiply( sa1  , sfg2  ) )
+        # H.L and DRZ  CORRELATIONS
+        cor_hl  =np.divide( cov_hl , np.multiply( sfg1 , sfg2  ) )
+        cor_drB =np.divide( cov_drB, np.multiply( sfg1 , sfg2  ) )
+        cor_drR =np.divide( cov_drR, np.multiply( sa1  , sfg2  ) )
 
 
         df_cor=pd.DataFrame({ 
-                "var"      :list( var ) , 
-                "period"   :list( dte ) ,
-                "nobs"     : nobs       ,
-                "dist"     :list(dist_list ) ,
-                "COR_HL"   : cor_hl     ,
-                "COR_DR-B" : cor_drB    ,
-                "COR_DR-R" : cor_drR
+                     "dist"     : dist_list    ,
+                     "nobs"     : nobs         ,
+                     "var"      : lvar         ,
+                     "period"   : lperiod      ,    
+                     "COR_HL"   : cor_hl       ,
+                     "COR_DR-R" : cor_drR      ,
+                     "COR_DR-B" : cor_drB
                 } )
 
+        df_cor       = df_cor.reset_index(drop=True)    # Remove mdist as an index  
 
         if inplace ==True:
            return cor_hl , cor_drB , cor_drR
@@ -159,10 +189,17 @@ class DHLStat:
 
 
     def getStatFrame (self , var ):
-        _,_, _, _, _, _, _, _  , dobs , dist_list, dte, var  =self.gp.GroupByBins (self.merged_df,  self.dist_max  ,self.bin_int )
+        d1 ,_, _ , _ , _ , _ , _ , _ , dobs , _ ,  dt1, dt2 , var  =self.gp.GroupByBins (self.merged_df,  self.dist_max  ,self.bin_int )
 
-        # N obs 
-        nobs=np.asarray(dobs )
+        # Bins distances 
+        dist_list = d1.index.to_list()
+        
+        # Var list and period  
+        lvar    = [var]* len(dist_list)
+        lperiod = [ str(dt1) +"_"+str(dt2) for _ in range(len( dist_list ))  ]
+        
+        # Nobs 
+        nobs=list(dobs )
 
         # Gather all Statistics  
         cov_hl, cov_drB, cov_drR     =self.getCov  ( var , inplace =True )
@@ -171,7 +208,10 @@ class DHLStat:
        
         # DataFrame: Contains  the Desroziers , Hollingsworth/Lonnberg   Cov, Sigma and Corr 
         drhl_frame={ 
+                     "dist"     :dist_list    ,
                      "nobs"     :nobs         ,
+                     "var"      :lvar         ,
+                     "period"   :lperiod      ,
                      "COV_HL"   :cov_hl       , 
                      "COV_DR-B" :cov_drB      ,
                      "COV_DR-R" :cov_drR      ,
@@ -184,5 +224,6 @@ class DHLStat:
                   }
 
         # Return statistics DF 
-        stat_frame =pd.DataFrame (   drhl_frame  )    # To Be Plotted   !!
-        return stat_frame 
+        stat_frame =pd.DataFrame (   drhl_frame  )
+        stat_frame       = stat_frame.reset_index(drop=True)    # Remove mdist as an index  
+        return stat_frame      # To be plotted   !!!
