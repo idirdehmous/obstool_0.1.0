@@ -48,8 +48,6 @@ class DCAFiles:
         return None
 
     def CheckDca( self,   dbpath , sub_base=None   , verbose = False   ):
-
-        print("Fallback to default  verbose = 1" )
         # Prepare DCA files if not  in ODB 
         db      = OdbObject ( dbpath )
         dbname  = db.GetAttrib()["name"]
@@ -71,6 +69,9 @@ class DCAFiles:
 
 
 
+
+
+
 class OdbReader:
     """
     Class : @Prepare the query according to the user setting (Obs list , period etc)
@@ -82,7 +83,10 @@ class OdbReader:
        # Path to the directory containing the ODB(s)
        self.odb_path = dbpath    
        self.odb_type = type_
-       if  not os.path.isdir (self.odb_path): print("ODB(s) directory '{}' not found.".format( self.odb_path )) ; sys.exit(0)
+
+       if  not os.path.isdir (self.odb_path): 
+           print("ODB(s) directory '{}' not found.".format( self.odb_path ))  
+           sys.exit(0)
 
        # Setting 
        self.st    = Setting ()
@@ -110,23 +114,23 @@ class OdbReader:
 
 
 
-    def get_odb_rows  (self,     period     ,      
+    def get_odb_rows  (self,     period      ,      
                                  obs_list    ,
-                                 cycle_inc  =3 , 
-                                 reprocess_odb=True, 
+                                 max_dist    ,
+                                 cycle_inc  =3, 
                                  chunk_size = None , 
                                  pbar       =False , 
                                  verbosity  =0):
         vrb=verbosity
         if vrb not in [0,1,2,3]:
            print("Min and max verbosity levels: 0 ->  3.  Got :  ", vrb )
-           print("Fallback to default  verbose = 1" )
+           print("Fallback to default value:  verbosity=", vrb  )  
 
 
-        # Default dict  
+        # Default dict  (Collect dataframes with variable as a key )
         df_vars =  defaultdict(list)
 
-        # Period extent 
+        # Diags period 
         period_interval=  [ min( period ) , max(period)  ]
 
         # ODB  Paths 
@@ -170,20 +174,21 @@ class OdbReader:
 
                 nfunc , sql_query = self.sql.CheckQuery( query)
                 cdtg =  period [i]
-                if vrb in [ 2, 3]:
-                   print( "Process observation type {} ODB date {} ".format( obs , cdtg   ))
-                       
+                if vrb in [1, 2, 3]:
+                   print( "Process observation type {} ODB date {} ".format( obs , cdtg   ))                       
                    query_file=None   ;
                    poolmask = None   ; 
                    pool      =None   ; 
-                   float_fmt = 8     ;  
+                   float_fmt = 10    ;   # 10 digits float values  
                    verbose = False 
 
-                   if vrb in  [3]:
-                      verbose   = True ;
-                   
+                   # Progress bar & Verbosity inside pyodb  
+                   # Progress bar is very useful for huge ODBs
+                   if vrb in [3 ] : verbose= True 
+                   if vrb in [1,2]: pbar   = False 
+
                    try:
-                      rows=   odbDict    (cma_path  ,
+                      rows=   odbDict (cma_path  ,
                                        sql_query , 
                                        nfunc     , 
                                        float_fmt , 
@@ -192,18 +197,27 @@ class OdbReader:
                                        pbar      ,
                                        verbose )
                    
-                      df_dist=  self.rd.DfDist ( rows   )  
+                      # Build a DF with latlon distances                     
+                      df_dist=  self.rd.DfDist ( rows ,  max_dist    )
+
+                      # Subset  <= max_dist  
                       spl_df =  SplitDf ( df_dist  , obs , cdtg  )
                       sub_df =  spl_df.SubsetDf ()
-                      self.dlist[obs].append(  sub_df)  
+                   
+                      self.dlist[obs].append( sub_df  )  
+
                       del rows 
-                      gc.collect()    # Clean 
+                      gc.collect()    # Memory garbage ! 
                    except:
                       pyodb.EmptyResultError
                       print( "Warning : SQL request {} returned no data for variable {}".format(query, obs )  )
+                      # Append empty DF  
+                      self.dlist[obs].append(pd.DataFrame[{}])
                       pass  
-
         return self.dlist  
+
+
+
 
 
 
@@ -217,19 +231,20 @@ class Rows2Df :
              @To speed up the computation of the distances between the 
               latlon pairs , the Great Circle distance function has been 
               wrapped in the C  inside pyodb  module.   
+
+             @The returned DF is a subset of the whole 1st one such as dist<= max_dist
     """
 
     def __init__(self):
         return None 
 
 
-    def DfDist (self ,rows , verbosity =0 ):
 
+    def DfDist (self ,rows , max_dist , verbosity =0 ):
         vrb=verbosity
         if vrb not in [0,1,2,3]:
             print("WARNING : Min and max verbosity levels: 0 ->  3.  Got :  ", vrb )
-            print("Fallback to default  verbose = 1" )
-
+            print("Fallback to default value:  verbosity=", vrb  ) 
 
         if rows is None:
            print("Rows from ODB not available for  var :  {}".format(var ) )
@@ -251,7 +266,7 @@ class Rows2Df :
            an1, an2 = zip(*product(an_d, repeat=2))
            fg1, fg2 = zip(*product(fg_d, repeat=2))
 
-           #  DF with distances and departures 
+           #  Attach  distances and departures 
            df_dist= pd.DataFrame( {"d1"  :d1  ,
                                    "d2"  :d2  ,
                                    "dist":dist_1d, 
@@ -260,17 +275,15 @@ class Rows2Df :
                                    "FG1" :fg2 , 
                                    "FG2" :fg1} 
                                    )
-           del dist_1d , d1,d2,an1,an2,fg1,fg2 
-           gc.collect()
-           return df_dist 
+          
+           df_dist_ =  df_dist [df_dist["dist"] <= max_dist ]
+           return df_dist_ 
 
-
-
-    def PrepDf   (self , df_list  ):                 
+    def PrepDf   (self , dlist ):                         
         # Concat dfs by  vars  
         cnt=  ConcatDf ()
-        cdf=  cnt.ConcatByDate (df_list )
-        return  cdf  
+        cdf=  cnt.ConcatByDate (dlist)
+        return cdf   
 
 
 
