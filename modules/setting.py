@@ -53,7 +53,7 @@ class Setting:
         obs_name =[ item["obs_name"] for item in obsdict  ]
         for obs in obs_list:
             if obs.strip() not in obs_name:
-               print("Can t process the given obstype {}. Not in predefined list of conventional obstypes".format( obs ))
+               print("Can t process the given obstype {}. Not predefined in the list of conventional obstypes".format( obs ))
                sys.exit(3)
          
         # Obs attributes          
