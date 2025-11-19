@@ -53,7 +53,20 @@ class SplitDf:
                       "FGsqr2" :f2f2,
                       "Asqr1"  :a1a1  
                    }
-        stat_df=pd.DataFrame( df_frame   )
+        stat_df=pd.DataFrame( df_frame).astype( {
+                                      "d1": "int32",
+                                      "d2": "int32",
+                                    "dist": "float32",
+                                     "OA1": "float32",
+                                     "OA2": "float32",
+                                     "FG1": "float32",
+                                     "FG2": "float32",
+                                  "AFGsqr": "float32",
+                                   "FGsqr": "float32",
+                                  "FGsqr1": "float32",
+                                  "FGsqr2": "float32",
+                                   "Asqr1": "float32",
+                                      })
         return stat_df  
 
 
@@ -109,7 +122,17 @@ class SplitDf:
                 "FGsqr2" :f2f2_sqrt.FGsqr2 ,
                 "Asqr1"  :a1a1_sqrt.Asqr1
                      }
-        spdf=pd.DataFrame ( frame_)
+        spdf=pd.DataFrame ( frame_).astype({
+                                    "nobs"  : "int32"  ,
+                                    "dist"  : "float32", 
+                                    "Asum1" : "float32",
+                                    "FGsum1": "float32",
+                                    "FGsum2": "float32",
+                                    "AFGsqr": "float32",
+                                    "FGsqr" : "float32",
+                                    "FGsqr1": "float32",
+                                    "FGsqr2": "float32",
+                                    "Asqr1" : "float32"})
         
         return spdf 
 
