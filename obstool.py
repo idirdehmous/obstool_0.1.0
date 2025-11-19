@@ -43,12 +43,18 @@ obs_category="conv"
 
 # Var list and other 
 cycle_inc = 3 
-var_list     =["airep_t"] #,  "airep_u" , "airep_v"] #, "airep_v" , "temp_t" ] #"airepl_t"]
+var_list  = [  "airep_t"  ] #, "airep_u","airep_v" ] #,"radar_rh", "radar_dow"] #, "airep_v" , "temp_t" ] #"airepl_t"]
+
+
+# Set bin and max distance for diagnostics 
+max_dist=  80
+bin_dist=  10
 
 
 
 # Instantiate    
 st = Setting ()
+gp = GroupDf ()
 rd = Rows2Df ()
 rr = OdbReader(odb_path , odb_type )
 
@@ -59,22 +65,20 @@ period=st.set_period(  bdate, edate  )
 # Check the var list  
 st.set_obs_list(  var_list     )
 
-# Collection of DataFrames 
-dflist= rr.get_odb_rows (period , var_list, cycle_inc , pbar =True , verbosity =2 )
+# Collection of pre-selected frames with distances <= max_dist    
+dlist= rr.get_odb_rows (period ,var_list, max_dist , cycle_inc , pbar =True , verbosity =2 )
 
-# Concat 
-cdf= rd.PrepDf( dflist )
-
-
-# Set bin and max distance for diagnostics 
-max_dist=  80
-bin_dist=  10
+# Concat Df 
+cdf = rd.PrepDf( dlist )
 
 # Get the stats by var
-# 
-for var in var_list:
-    dhl= DHLStat ( cdf[var], max_dist = max_dist ,bin_dist = bin_dist   )
-    print( dhl.getStatFrame( var )  )
+for var  in var_list:
+    dhl= DHLStat ( cdf[var] , max_dist = max_dist ,bin_dist = bin_dist   )
+    cov= dhl.getCov( var , inplace=False )
+    sig= dhl.getSig( var , inplace=False )
+    cor= dhl.getCor( var , inplace=False )
+    diag=dhl.getStatFrame(var) 
+    print(  diag )
 
 
 quit()
