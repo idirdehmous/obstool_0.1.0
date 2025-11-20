@@ -91,7 +91,6 @@ class DHLStat:
                                                              "nobs"    :"int32"   ,
                                                              "var"     :"category",
                                                              "period"  :"category",
-                                                             "dist"    :"float32" ,
                                                              "COV_HL"  :"float32" ,
                                                              "COV_DR-B":"float32" ,
                                                              "COV_DR-R":"float32"
@@ -147,7 +146,6 @@ class DHLStat:
                                 }).astype( {   "nobs"     :"int32"   ,
                                                 "var"     :"category",
                                               "period"    :"category",
-                                               "dist"     :"float32" ,
                                                "sigma_fg1":"float32" ,
                                                "sigma_fg2":"float32" ,
                                                "sigma_a1" :"float32"
@@ -198,7 +196,6 @@ class DHLStat:
                               } ).astype( {   "nobs":"int32"   ,
                                               "var" :"category",
                                             "period":"category",
-                                              "dist":"float32" ,
                                          "COR_HL"   :"float32" ,
                                          "COR_DR-R" :"float32" ,
                                          "COR_DR-B" :"float32"
@@ -250,7 +247,6 @@ class DHLStat:
 
         # Return statistics DF 
         stat_frame =pd.DataFrame (   drhl_frame  ).astype({
-                                              "dist":"float32" ,
                                               "nobs":"int32"   ,     
                                               "var" :"category",      
                                             "period":"category",      
