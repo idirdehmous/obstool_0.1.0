@@ -4,6 +4,8 @@ import pandas as pd
 import numpy  as np 
 from   itertools   import product 
 from   collections import defaultdict  
+from   multiprocessing import Pool, cpu_count, Process , Pipe 
+
 
 sys.path.insert(0,"/home/idehmous/Desktop/rmib_dev/github/pyodb_1.1.0/build/lib.linux-x86_64-cpython-39")
 
@@ -27,7 +29,7 @@ from build_sql       import SqlHandler
 from obstype_info    import ObsType
 from setting         import Setting  , Conv
 from handle_df       import *
-
+from dist_matrix     import DistMatrix
 
 
 
@@ -223,7 +225,6 @@ class OdbReader:
 
 
 
-
 class Rows2Df :
 
     """
@@ -236,6 +237,7 @@ class Rows2Df :
     """
 
     def __init__(self):
+        #self.gc =  gcDistance ()
         return None 
 
 
@@ -250,21 +252,37 @@ class Rows2Df :
            print("Rows from ODB not available for  var :  {}".format(var ) )
            sys.exit()
         else:
-           lats= rows["degrees(lat)" ] 
-           lons= rows["degrees(lon)" ] 
-           an_d= rows["an_depar@body"] 
-           fg_d= rows["fg_depar@body"] 
+           lats= rows["degrees(lat)" ]
+           lons= rows["degrees(lon)" ]
+           an_d= np.array(rows["an_depar@body"])
+           fg_d= np.array(rows["fg_depar@body"])
+
 
            # ARGS order  :  lons1, lats1, lon2, lat2 : Compute distances between latlon pairs 
-           dist      =  odbGcdistance ( lons, lats, lons, lats  )
-           dist_1d   =  dist.reshape  ( len(lats)**2            )
-
+           #dist= ComputeDistances odbGcdistance ( lons, lats, lons, lats  )
+           d= DistMatrix (lons , lats  )
+           dist = d.GcdistParallel ()
+           
+           # With pool and chunks = 400  worker =16 , time = 1m20s 
+           #latlon = np.array( [lats , lons ]).T  
+           #dist=self.gc.ComputeDistances(  latlon, chunk_size=200, workers=None)
+           dist_1d = dist.reshape(len(lats)**2)
+            
            # Indices
-           d1, d2 = zip(*product(range(len(lats)), repeat=2))
+           N = len(lats)
+           d1, d2 = np.indices((N, N))
+           d1 = d1.ravel().astype(np.int32, copy=False)
+           d2 = d2.ravel().astype(np.int32, copy=False)
 
            # data
-           an1, an2 = zip(*product(an_d, repeat=2))
-           fg1, fg2 = zip(*product(fg_d, repeat=2))
+           an = np.asarray(an_d, dtype=np.float32)
+           fg = np.asarray(fg_d, dtype=np.float32)
+
+           an1 , an2 = np.meshgrid(an, an, indexing="ij")
+           an1 , an2 = an1.ravel() , an2.ravel()
+
+           fg1 , fg2 = np.meshgrid(fg ,fg,indexing="ij")
+           fg1 , fg2 = fg1.ravel() , fg2.ravel()            
 
            #  Attach  distances and departures 
            df_dist= pd.DataFrame( {"d1"  :d1  ,
@@ -286,7 +304,6 @@ class Rows2Df :
                        "FG2" : "float32"
              })
 
-          
            return  df_dist [df_dist["dist"] <= max_dist ]
 
     def PrepDf   (self , dlist ):                         
