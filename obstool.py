@@ -43,7 +43,7 @@ obs_category="conv"
 
 # Var list and other 
 cycle_inc = 3 
-var_list  = [  "airep_t"  ] #, "airep_u","airep_v" ] #,"radar_rh", "radar_dow"] #, "airep_v" , "temp_t" ] #"airepl_t"]
+var_list  = [  "radar_rh" ] # , "airep_u","airep_v" ] #,"radar_rh", "radar_dow"] #, "airep_v" , "temp_t" ] #"airepl_t"]
 
 
 # Set bin and max distance for diagnostics 
@@ -70,7 +70,6 @@ dlist= rr.get_odb_rows (period ,var_list, max_dist , cycle_inc , pbar =True , ve
 
 # Concat Df 
 cdf = rd.PrepDf( dlist )
-
 # Get the stats by var
 for var  in var_list:
     dhl= DHLStat ( cdf[var] , max_dist = max_dist ,bin_dist = bin_dist   )
@@ -78,7 +77,7 @@ for var  in var_list:
     sig= dhl.getSig( var , inplace=False )
     cor= dhl.getCor( var , inplace=False )
     diag=dhl.getStatFrame(var) 
-    print(  diag )
+    print(  diag  )
 
 
 quit()
