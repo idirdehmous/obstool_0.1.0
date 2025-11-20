@@ -31,7 +31,6 @@ class SplitDf:
 
 
     def DeparturesDf ( self ):
-
         ndf= self.ndist_df
         a1f2   =self._mulDf ( ndf.OA1  ,ndf.FG2    ) 
         f1f2   =self._mulDf ( ndf.FG1  ,ndf.FG2    ) 
@@ -56,7 +55,6 @@ class SplitDf:
         stat_df=pd.DataFrame( df_frame).astype( {
                                       "d1": "int32",
                                       "d2": "int32",
-                                    "dist": "float32",
                                      "OA1": "float32",
                                      "OA2": "float32",
                                      "FG1": "float32",
@@ -104,7 +102,7 @@ class SplitDf:
         f1f1_sqrt= stat_df.groupby( "dbin"  ,observed=True) ["FGsqr1"].sum().reset_index()
         f2f2_sqrt= stat_df.groupby( "dbin"  ,observed=True) ["FGsqr2"].sum().reset_index()
         a1a1_sqrt= stat_df.groupby( "dbin"  ,observed=True) ["Asqr1" ].sum().reset_index()
-
+        
         # Splitted DF by dist intervals 
         var_col=[ self.var   for v in range(len( oa1_sum ) ) ]
         dte_col=[ self.cdtg  for v in range(len( oa1_sum ) ) ]
@@ -124,7 +122,6 @@ class SplitDf:
                      }
         spdf=pd.DataFrame ( frame_).astype({
                                     "nobs"  : "int32"  ,
-                                    "dist"  : "float32", 
                                     "Asum1" : "float32",
                                     "FGsum1": "float32",
                                     "FGsum2": "float32",
@@ -154,8 +151,6 @@ class ConcatDf:
         for k , v in  sub_df.items():
             merged_df    =pd.concat ( v ) 
             merged_dict[k]=merged_df.reset_index().drop(columns =["index"])
-        del merged_df
-        gc.collect()
         return merged_dict
 
 
@@ -180,12 +175,10 @@ class GroupDf:
         d_bins    = [ int(i) for i in   np.arange(0,self.max_ndist     + self.bin_ninterval    ,self.bin_ninterval )  ]
         d_label   = [ int(i) for i in   np.arange(self.bin_ninterval/2 , self.max_ndist+self.bin_ninterval  -(self.bin_ninterval/2) , self.bin_ninterval)  ]
 
-
         # DIVIDE BY DIST INTERVALS 
         cut_series  , used_bins  = pd.cut( merged_df ['dist'], bins=d_bins , labels=d_label, retbins=True  )
-        merged_df["mdist"] = cut_series  # Middle bins 
+        merged_df["mdist"] = cut_series  # Middle intervals 
 
-         
         # Needed Columns:Asum1,FGsum1,FGsum2,AFGsqr, FGsqr, FGsqr1, FGsqr2, Asqr
         d1  =merged_df.groupby("mdist", observed=False)["Asum1"  ].sum()
         d2  =merged_df.groupby("mdist", observed=False)["FGsum1" ].sum()
