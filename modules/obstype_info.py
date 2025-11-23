@@ -66,7 +66,7 @@ class ObsType:
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None          },
-         { "obs_name"          :  "synop_rh",
+         { "obs_name"          :  "synop_h",
            "obstype"           : 1 ,
            "codetype"          : [11, 14, 170, 182] ,
            "varno"             : 58, 
@@ -135,21 +135,21 @@ class ObsType:
 
        # UPPER AIR 
         {  "obs_name"          : "airep_t",
-           "obstype"           :  2 ,
+           "obstype"           : [2] ,
            "codetype"          : None,
-           "varno"             : 2 ,
+           "varno"             : [2] ,
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None           },
         {  "obs_name"          : "airep_u",
-           "obstype"           :  2 ,
+           "obstype"           : 2 ,
            "codetype"          : None,
            "varno"             : 3, 
            "vertco_reference_1": None,
            "sensor"            : None,
            "level_range"       : None           },
         {  "obs_name"          : "airep_v",
-           "obstype"           :  2 ,
+           "obstype"           : 2 ,
            "codetype"          : None,
            "varno"             : 4 ,
            "vertco_reference_1": None,
@@ -283,4 +283,5 @@ class ObsType:
              sys.exit ()
           self.list          = list_
           obs_list, var_dict , var_unit  =self.ConvDict()
+
 
