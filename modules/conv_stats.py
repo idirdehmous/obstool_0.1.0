@@ -51,7 +51,7 @@ class DHLStat:
 
 
     def getCov(self , var , inplace=None  ):
-        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , _ ,  dt1, dt2 , var =self.gp.GroupByBins (self.merged_df , self.dist_max  ,self.bin_int )
+        d1,d2, d3, d4, d5, d6, d7, d8 , dobs , _ ,  dt1, dt2 , var =self.gp.GroupByBins (self.merged_df, self.dist_max, self.bin_int )
         
         # Bins distances 
         dist_list = d1.index.to_list() 
@@ -96,7 +96,7 @@ class DHLStat:
                                                              "COV_DR-R":"float32"
                                                              })
 
-        df_cov       = df_cov.reset_index(drop=True)    # Remove mdist as an index  
+        df_cov       = df_cov.reset_index(drop=True).dropna(inplace=False ).reset_index()    # Remove mdist as an index  and NaN 
 
 
         if inplace ==True :
@@ -151,7 +151,7 @@ class DHLStat:
                                                "sigma_a1" :"float32"
                                                              })
 
-        df_sig       = df_sig.reset_index(drop=True)    # Remove mdist as an index  
+        df_sig       = df_sig.reset_index(drop=True).dropna(inplace=False ).reset_index()    # Remove mdist as an index and NaN 
 
 
         if inplace ==True:
@@ -202,7 +202,7 @@ class DHLStat:
                                                              })
 
 
-        df_cor       = df_cor.reset_index(drop=True)    # Remove mdist as an index  
+        df_cor       = df_cor.reset_index(drop=True).dropna(inplace=False ).reset_index()    # Remove mdist as an index  and NaN 
 
         if inplace ==True:
            return cor_hl , cor_drB , cor_drR
@@ -261,5 +261,5 @@ class DHLStat:
                                          "COR_DR-B" :"float32"      
                                                              })
 
-        stat_frame       = stat_frame.reset_index(drop=True)    # Remove mdist as an index  
+        stat_frame       = stat_frame.dropna(inplace=False ).reset_index(drop=True)    # Remove mdist as an index  
         return stat_frame      # To be plotted   !!!
