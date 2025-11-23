@@ -15,10 +15,11 @@ class SplitDf:
     """
         Class :@Split and subset  DF 
     """
-    def __init__ (self,dfdist , var , cdtg ,  bdist_max=100  , bin_int=10 , time_int=60 ):
-        self.max_dist  = bdist_max  # Maxumum distance for binning in [Km]
-        self.bin_int   = bin_int    # Binning interval in   [Km]
-        self.time_int  = time_int   # Time between OmG/OmA  pairs in [+/- min]
+
+    def __init__ (self,dfdist , var , cdtg ,  max_dist =100  , bin_dist =10 , time_int=60 ):
+        self.max_dist  = max_dist     # Maxumum distance for binning in [Km]
+        self.bin_int   = bin_dist     # Binning interval in   [Km]
+        self.time_int  = time_int     # Time between OmG/OmA  pairs in [+/- min]
         self.ndist_df  = dfdist
         self.var       = var  
         self.cdtg      = cdtg  
@@ -30,23 +31,23 @@ class SplitDf:
         return df
 
 
-    def DeparturesDf ( self ):
-        ndf= self.ndist_df
-        a1f2   =self._mulDf ( ndf.OA1  ,ndf.FG2    ) 
-        f1f2   =self._mulDf ( ndf.FG1  ,ndf.FG2    ) 
-        f1f1   =self._mulDf ( ndf.FG1  ,ndf.FG1    )
-        f2f2   =self._mulDf ( ndf.FG2  ,ndf.FG2    )
-        a1a1   =self._mulDf ( ndf.OA1  ,ndf.OA1    )
-        a1f1   =self._mulDf ( ndf.OA1  ,ndf.FG1    )
+    def DepartureStat  ( self, ndist_df  ):
+        a1f2   =self._mulDf ( ndist_df.OA1  ,ndist_df.FG2    ) 
+        f1f2   =self._mulDf ( ndist_df.FG1  ,ndist_df.FG2    ) 
+        f1f1   =self._mulDf ( ndist_df.FG1  ,ndist_df.FG1    )
+        f2f2   =self._mulDf ( ndist_df.FG2  ,ndist_df.FG2    )
+        a1a1   =self._mulDf ( ndist_df.OA1  ,ndist_df.OA1    )
+        a1f1   =self._mulDf ( ndist_df.OA1  ,ndist_df.FG1    )
 
-        df_frame = {  "d1"     :ndf.d1   ,
-                      "d2"     :ndf.d2   ,
-                      "dist"   :ndf.dist ,
-                      "OA1"    :ndf.OA1  ,
-                      "OA2"    :ndf.OA2  ,
-                      "FG1"    :ndf.FG1  ,
-                      "FG2"    :ndf.FG2  ,
-                      "AFGsqr" :a1f1, 
+        df_frame = {  "d1"     :ndist_df.d1   ,
+                      "d2"     :ndist_df.d2   ,
+                      "ldist"  :ndist_df.dbin ,
+                      "dist"   :ndist_df.dist ,
+                      "OA1"    :ndist_df.OA1  ,
+                      "OA2"    :ndist_df.OA2  ,
+                      "FG1"    :ndist_df.FG1  ,
+                      "FG2"    :ndist_df.FG2  ,
+                      "AFGsqr" :a1f2, 
                       "FGsqr"  :f1f2,
                       "FGsqr1" :f1f1, 
                       "FGsqr2" :f2f2,
@@ -55,6 +56,8 @@ class SplitDf:
         stat_df=pd.DataFrame( df_frame).astype( {
                                       "d1": "int32",
                                       "d2": "int32",
+                                   "ldist": "int32",
+                                    "dist": "int32",
                                      "OA1": "float32",
                                      "OA2": "float32",
                                      "FG1": "float32",
@@ -65,27 +68,33 @@ class SplitDf:
                                   "FGsqr2": "float32",
                                    "Asqr1": "float32",
                                       })
-        return stat_df  
+        return stat_df 
 
 
 
     def SubsetDf (self  ):
-        max_dist      = self.max_dist
-        dist_interval = self.bin_int
+        max_dist = self.max_dist
+        bin_dist = self.bin_int
 
-        stat_df=self.DeparturesDf()
+        dbin   = [0,1]+list(np.arange(bin_dist, max_dist + bin_dist , bin_dist ))
+        dlabel = [0  ]+list(np.arange(bin_dist, max_dist + bin_dist , bin_dist ))
 
-        dbin   = [0,1]+list(np.arange(self.bin_int, self.max_dist + self.bin_int , self.bin_int ))
-        dlabel = [0  ]+list(np.arange(self.bin_int, self.max_dist + self.bin_int , self.bin_int ))
+        # Get back : df_dist 
+        # DIVIDE BY DIST INTERVALS
+        df_dist    = self.ndist_df[self.ndist_df ["dist"] <= max_dist  ]
 
-        # DIVIDE BY DIST INTERVALS 
-        dfcut  =pd.cut( stat_df['dist'], bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
-        stat_df["dbin"] = dfcut[0]
+        # Subset by bin interval 
+        dist_cut , used_bins  = pd.cut(   df_dist["dist"],  bins=dbin , labels=dlabel, right=True, include_lowest=True, retbins=True )
+
+        df_dist["dbin" ]=dist_cut  # Add bin list to dataframe 
+
+        # Prepare  Desroziers /H.L statistics 
+        stat_df = self.DepartureStat (df_dist )
 
         # NOBS  & DISTS 
-        nobs  = stat_df.groupby     ( "dbin"  , observed=True)["dist"].count()
-        ldist = list(stat_df.groupby( "dbin"  , observed=True)["dbin"].groups.keys())
-   
+        nobs  = stat_df.groupby     ( "ldist"  , observed=True)["dist"].count()
+        ldist = list(stat_df.groupby( "ldist"  , observed=True)["dist"].groups.keys())
+
         # Col names         
         # sum(AO1)  sum(FG1)    sum(FG2)
         # AFGsqr  ->  OA1*FG2
@@ -93,17 +102,16 @@ class SplitDf:
         # FGsqr1  ->  FG1*FG1
         # FGsqr2  ->  FG2*FG2
         # Asqr1   ->  OA1*OA1
-        oa1_sum  = stat_df.groupby( "dbin"  ,observed=True ) ["OA1"   ].sum().reset_index()
-        oa2_sum  = stat_df.groupby( "dbin"  ,observed=True ) ["OA2"   ].sum().reset_index()
-        fg1_sum  = stat_df.groupby( "dbin"  ,observed=True) ["FG1"   ].sum().reset_index()
-        fg2_sum  = stat_df.groupby( "dbin"  ,observed=True) ["FG2"   ].sum().reset_index()
-        a1f2_sqrt= stat_df.groupby( "dbin"  ,observed=True) ["AFGsqr"].sum().reset_index()
-        f1f2_sqrt= stat_df.groupby( "dbin"  ,observed=True) ["FGsqr" ].sum().reset_index()
-        f1f1_sqrt= stat_df.groupby( "dbin"  ,observed=True) ["FGsqr1"].sum().reset_index()
-        f2f2_sqrt= stat_df.groupby( "dbin"  ,observed=True) ["FGsqr2"].sum().reset_index()
-        a1a1_sqrt= stat_df.groupby( "dbin"  ,observed=True) ["Asqr1" ].sum().reset_index()
+        oa1_sum  = stat_df.groupby( "ldist"  ,observed=True )["OA1"   ].sum().reset_index()
+        oa2_sum  = stat_df.groupby( "ldist"  ,observed=True )["OA2"   ].sum().reset_index()
+        fg1_sum  = stat_df.groupby( "ldist"  ,observed=True) ["FG1"   ].sum().reset_index()
+        fg2_sum  = stat_df.groupby( "ldist"  ,observed=True) ["FG2"   ].sum().reset_index()
+        a1f2_sqrt= stat_df.groupby( "ldist"  ,observed=True) ["AFGsqr"].sum().reset_index()
+        f1f2_sqrt= stat_df.groupby( "ldist"  ,observed=True) ["FGsqr" ].sum().reset_index()
+        f1f1_sqrt= stat_df.groupby( "ldist"  ,observed=True) ["FGsqr1"].sum().reset_index()
+        f2f2_sqrt= stat_df.groupby( "ldist"  ,observed=True) ["FGsqr2"].sum().reset_index()
+        a1a1_sqrt= stat_df.groupby( "ldist"  ,observed=True) ["Asqr1" ].sum().reset_index()
         
-        # Splitted DF by dist intervals 
         var_col=[ self.var   for v in range(len( oa1_sum ) ) ]
         dte_col=[ self.cdtg  for v in range(len( oa1_sum ) ) ]
 
@@ -122,6 +130,7 @@ class SplitDf:
                      }
         spdf=pd.DataFrame ( frame_).astype({
                                     "nobs"  : "int32"  ,
+                                    "dist"  : "float32",
                                     "Asum1" : "float32",
                                     "FGsum1": "float32",
                                     "FGsum2": "float32",
@@ -130,7 +139,6 @@ class SplitDf:
                                     "FGsqr1": "float32",
                                     "FGsqr2": "float32",
                                     "Asqr1" : "float32"})
-        
         return spdf 
 
 
@@ -148,9 +156,12 @@ class ConcatDf:
     def ConcatByDate (self, sub_df  ):
         merged_dict={}
         merged_df  =pd.DataFrame ()
+
         for k , v in  sub_df.items():
-            merged_df    =pd.concat ( v ) 
-            merged_dict[k]=merged_df.reset_index().drop(columns =["index"])
+            if len(v) !=0 :
+               merged_df    =pd.concat ( v ) 
+               merged_dict[k]=merged_df.reset_index().drop(columns =["index"])
+            
         return merged_dict
 
 
@@ -163,17 +174,16 @@ class GroupDf:
     def __init__(self  ):
         return None 
 
-    def GroupByBins (self, merged_df    , max_dist=100  ,  bin_int =10 ):
-        self.max_ndist    = max_dist
-        self.bin_ninterval= bin_int
+    def GroupByBins (self, merged_df    , max_dist ,  bin_int  ):
+        #pd.set_option('display.max_rows', None )
+        self.max_dist  = max_dist
+        self.bin_int   = bin_int
 
-        if max_dist != 100:
-           self.max_ndist     =  max_dist
-        if bin_int != 10 :
-           self.bin_ninterval =  bin_int
+        # Dist in the middle of bin interval
+        d_bins  = list(range(0, self.max_dist + self.bin_int,  self.bin_int  ))        
+        d_label = [(d_bins[i] + d_bins[i+1]) / 2 for i in range(len(d_bins)-1)]
 
-        d_bins    = [ int(i) for i in   np.arange(0,self.max_ndist     + self.bin_ninterval    ,self.bin_ninterval )  ]
-        d_label   = [ int(i) for i in   np.arange(self.bin_ninterval/2 , self.max_ndist+self.bin_ninterval  -(self.bin_ninterval/2) , self.bin_ninterval)  ]
+
 
         # DIVIDE BY DIST INTERVALS 
         cut_series  , used_bins  = pd.cut( merged_df ['dist'], bins=d_bins , labels=d_label, retbins=True  )
