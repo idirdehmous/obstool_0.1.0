@@ -20,8 +20,8 @@ class SqlHandler:
         # For the moment !
         self.obstool_select=None 
 
-        #self.derozie_select=None
-        #self.jarvine_select=None
+        #self.derozier_select=None
+        #self.jarvinen_select=None
         return None 
 
 
@@ -41,58 +41,65 @@ class SqlHandler:
         # Obstool columns and tables 
         self.obstool_select="SELECT  "+self.cols+" FROM " +self.tabs
 
-        where_cond =" "
-        obst_cond  =" " 
-        var_cond   =" "
-        ctype_cond =" "
-        level_cond =" "
-        sens_cond  =" "
-
-        self.obstool_select = self.obstool_select + where_cond   
-
-        # Check varno  
-        if self.varno is not None:
-           if isinstance (self.varno , int  ) :
-              var_cond = " varno =="+ str(self.varno)
-           else:
-              print("varno must be integer and not None" )
-              sys.exit()
-        else:
-           var_cond=" "
-
-       
         # Check obstype  
+        type_list=[]
         if self.obst is not None:
-           if isinstance (self.obst, int ) :   # It could be list ??    we add it later !
-              obst_cond  = " obstype=="+ str(self.obst )
+           if isinstance (self.obst, list ):
+              for tp in self.obst:
+                  if tp is not None:
+                     type_list.append (" obstype =="+str( tp ) )
+           elif isinstance (self.obst, int  ):
+              type_list.append (" obstype =="+str( self.obst ) )
+                
            else:
-              print("obstype  must be integer and not None" )
+              print(self.obs_, " : obstype  must be integer or a list" )
               sys.exit()
-        else:
-           obst_cond=" "
+
 
         
+        # Check varno  
+        varno_list=[]
+        if self.varno is not None:
+           if isinstance (self.varno , list ) :
+              for vr in self.varno:
+                  if vr is not None:
+                     varno_list.append (" varno =="+str( vr ) )
+           elif  isinstance( self.varno , int  ):
+               varno_list.insert(0, " varno =="+ str(self.varno)  )
+
+           else:
+              print(self.obs_ , ": varno must be integer ot list" )
+              sys.exit()
+        
         # Check codetype 
+        """
+        Not needed for the moment !
+        ctype_list=[""]
         if self.ctype is not None:
-            if isinstance( self.ctype,  list  )  or  isinstance (self.ctype ,  int  ):
-               ctype=  [ " codetype =="+str(item)   for item in  self.ctype ] 
-               ctype_cond = " OR ".join (ctype)
+            if isinstance( self.ctype,  list  ):
+               for ct  in self.ctype:
+                   if ct is not None:
+                      ctype_list.append (" codetype =="+str( ct ) )
+            elif isinstance( self.ctype , int  ):
+                   ctype_list.append(  " codetype =="+str(self.ctype ) )
             else:
-               print("codetype  must be integer or list "  )
-               sys.exit()
-        else:
-           ctype_cond=" "
+               print(self.obs_, ": codetype  must be integer or list "  )
+               sys.exit()"""
 
 
         # Check sensor 
+        sensor_list =[]
         if self.sensor != None:
-            if isinstance( self.ctype,  list  )  or  isinstance (self.ctype ,  int  ):
-               sens =  [ " sensor =="+str(item)   for item in  self.sensor ]
-               sen_cond  = " OR ".join( sens  )
+            if isinstance   (self.sensor ,  list  ):
+               for s in   self.sensor:
+                   if s is not None:
+                      sensor_list.append( " sensor=="+str(s)   )
+            elif isinstance (self.sensor ,  int ):
+                     sensor_list.append(  " sensor =="+str( self.sensor ) )
             else: 
-               print("sensor  must be integer or list "  )
-        else:
-            sens_cond=" " 
+                print(self.obs_, ": sensor  must be integer or list"  )
+                sys.exit()
+
 
         # Check level range 
         if self.levels != None :
@@ -109,26 +116,28 @@ class SqlHandler:
              l1 =str(self.levels[0] )
              l2 =str(self.levels[1] )
              level_cond="vertco_reference_1 >="+l1+" AND vertco_reference_1 <= "+l2 
-        else:
-          level_cond =" "
-
-        # Build the "Where" sql statement 
-        cond       = [ var_cond, obst_cond ,ctype_cond , level_cond ]
-        cond_list  = [ x.strip() for x in cond if x.strip() != ''   ]
-
-        if len(cond_list):
-           where_cond = " AND ".join(  cond_list )
 
 
-        # Add the other additional conditions 
-        #query=" "
-        if   self.other !=None and len(where_cond) == 0:
-           query=self.select_obstool +" WHERE  "+self.other
-        elif self.other !=None and len(where_cond) > 0:
-           query=self.obstool_select +" WHERE  "+where_cond+"  AND "+self.other    
+        where_cond_list=[]
+        for tp in type_list:
+           for vr in varno_list:
+                where_cond_list.append(  " AND ".join(  (tp, vr  ))   )
+
+
+        query=" " 
+        if   self.other !=None and len(where_cond_list) == 0:
+             query= self.obstool_select +" WHERE  "+self.other
+        
+        elif self.other !=None and len(where_cond_list) > 0:
+             
+             for condition in where_cond_list:
+                 query=self.obstool_select +" WHERE  " +  condition + "  AND  "+self.other 
+
         elif self.other ==None and len(where_cond) > 0:
-           query=self.obstool_select +" WHERE  "+where_cond 
-        return  query  
+             for condition in where_cond_list:
+                 query= self.obstool_select  +" WHERE  " +  condition 
+        
+        return  query
 
 
 
