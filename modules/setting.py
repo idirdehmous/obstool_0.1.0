@@ -129,7 +129,7 @@ class Conv:
         ODB_CONSIDER_TABLES="/hdr/desc/body"  
         self.tables        = ["hdr","desc","body"]
         self.tbl_env       = "/".join( self.tables  )
-        self.other_sql     = "(an_depar is not NULL) AND (fg_depar is not  NULL)  AND (datum_event1.fg2big@body = 0) "
+        self.other_sql     = "  (an_depar is not NULL) AND (fg_depar is not  NULL)  AND (datum_event1.fg2big@body = 0)"
         
         # ObsType list 
         self.conv_obs=[ 'gpssol' ,
